@@ -1,0 +1,81 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+created ARRAYS are not ordered
+### What happens?
+
+Creating an Array will shuffle the elements randomly, which:
+a) does not match the documentation, stating: 
+
+[Ordering](https://duckdb.org/docs/sql/data_types/array#ordering)
+
+The ordering of ARRAY instances is defined using a lexicographical order. NULL values compare greater than all other values and are considered equal to each other.
+
+b) becomes a problem when accessing the elements
+
+### To Reproduce
+
+```sql
+
+-- repeat a few times
+SELECT ARRAY
+  (SELECT 1 UNION ALL
+   SELECT 2 UNION ALL
+   SELECT 3
+   ORDER by 1) AS new_array;
+
+/* outputs are:
+┌───────────┐
+│ new_array │
+├───────────┤
+│ [2, 3, 1] │
+└───────────┘
+
+┌───────────┐
+│ new_array │
+├───────────┤
+│ [2, 1, 3] │
+└───────────┘
+
+┌───────────┐
+│ new_array │
+├───────────┤
+│ [3, 1, 2] │
+└───────────┘
+
+*/
+
+```
+
+### OS:
+
+Linux
+
+### DuckDB Version:
+
+0.10.0 .. 0.11-Snapshot
+
+### DuckDB Client:
+
+Java
+
+### Full Name:
+
+Andreas Reichel
+
+### Affiliation:
+
+Reichel
+
+### Have you tried this on the latest [nightly build](https://duckdb.org/docs/installation/?version=main)?
+
+I have tested with a nightly build
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

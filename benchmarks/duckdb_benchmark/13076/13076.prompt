@@ -1,0 +1,124 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+`LIST_DOT_PRODUCT([], [])`: INTERNAL Error: Operation requires a flat vector but a non-flat vector was encountered
+### What happens?
+
+running `SELECT LIST_DOT_PRODUCT([], [])` raises `INTERNAL Error: Operation requires a flat vector but a non-flat vector was encountered`
+
+Error exists in some environments:
+- mac m1, python, duckdb versions >=0.10.1
+
+Does not exist:
+- mac m1, python, duckdb==0.10.0
+- shell.duckdb.org with duckdb 1.0.0
+
+Maybe related to https://github.com/duckdb/duckdb/issues/11542? At least the same error message.
+
+### To Reproduce
+
+```python
+import duckdb
+
+sql = "SELECT LIST_DOT_PRODUCT([], [])"
+duckdb.sql(sql)
+```
+
+### OS:
+
+MacM1, MacOS 14.5
+
+### DuckDB Version:
+
+anything >=0.10.1
+
+### DuckDB Client:
+
+python
+
+### Full Name:
+
+Nick Crews
+
+### Affiliation:
+
+Ship Creek Group
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+`LIST_DOT_PRODUCT([], [])`: INTERNAL Error: Operation requires a flat vector but a non-flat vector was encountered
+### What happens?
+
+running `SELECT LIST_DOT_PRODUCT([], [])` raises `INTERNAL Error: Operation requires a flat vector but a non-flat vector was encountered`
+
+Error exists in some environments:
+- mac m1, python, duckdb versions >=0.10.1
+
+Does not exist:
+- mac m1, python, duckdb==0.10.0
+- shell.duckdb.org with duckdb 1.0.0
+
+Maybe related to https://github.com/duckdb/duckdb/issues/11542? At least the same error message.
+
+### To Reproduce
+
+```python
+import duckdb
+
+sql = "SELECT LIST_DOT_PRODUCT([], [])"
+duckdb.sql(sql)
+```
+
+### OS:
+
+MacM1, MacOS 14.5
+
+### DuckDB Version:
+
+anything >=0.10.1
+
+### DuckDB Client:
+
+python
+
+### Full Name:
+
+Nick Crews
+
+### Affiliation:
+
+Ship Creek Group
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

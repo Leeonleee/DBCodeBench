@@ -1,0 +1,57 @@
+diff --git a/src/include/duckdb/planner/expression_binder/column_alias_binder.hpp b/src/include/duckdb/planner/expression_binder/column_alias_binder.hpp
+index 4f1e2c34abda..d70e65c7d202 100644
+--- a/src/include/duckdb/planner/expression_binder/column_alias_binder.hpp
++++ b/src/include/duckdb/planner/expression_binder/column_alias_binder.hpp
+@@ -23,6 +23,8 @@ class ColumnAliasBinder {
+ 
+ 	bool BindAlias(ExpressionBinder &enclosing_binder, unique_ptr<ParsedExpression> &expr_ptr, idx_t depth,
+ 	               bool root_expression, BindResult &result);
++	// Check if the column reference is an SELECT item alias.
++	bool QualifyColumnAlias(const ColumnRefExpression &colref);
+ 
+ private:
+ 	SelectBindState &bind_state;
+diff --git a/src/include/duckdb/planner/expression_binder/where_binder.hpp b/src/include/duckdb/planner/expression_binder/where_binder.hpp
+index e04651e1524d..20c4431204c6 100644
+--- a/src/include/duckdb/planner/expression_binder/where_binder.hpp
++++ b/src/include/duckdb/planner/expression_binder/where_binder.hpp
+@@ -24,6 +24,7 @@ class WhereBinder : public ExpressionBinder {
+ 	                          bool root_expression = false) override;
+ 
+ 	string UnsupportedAggregateMessage() override;
++	bool QualifyColumnAlias(const ColumnRefExpression &colref) override;
+ 
+ private:
+ 	BindResult BindColumnRef(unique_ptr<ParsedExpression> &expr_ptr, idx_t depth, bool root_expression);
+diff --git a/src/planner/expression_binder/column_alias_binder.cpp b/src/planner/expression_binder/column_alias_binder.cpp
+index fbe0f5a377fb..c4477f9e348a 100644
+--- a/src/planner/expression_binder/column_alias_binder.cpp
++++ b/src/planner/expression_binder/column_alias_binder.cpp
+@@ -43,4 +43,11 @@ bool ColumnAliasBinder::BindAlias(ExpressionBinder &enclosing_binder, unique_ptr
+ 	return true;
+ }
+ 
++bool ColumnAliasBinder::QualifyColumnAlias(const ColumnRefExpression &colref) {
++	if (!colref.IsQualified()) {
++		return bind_state.alias_map.find(colref.column_names[0]) != bind_state.alias_map.end();
++	}
++	return false;
++}
++
+ } // namespace duckdb
+diff --git a/src/planner/expression_binder/where_binder.cpp b/src/planner/expression_binder/where_binder.cpp
+index b8cf24ea27e0..9b25c7930b63 100644
+--- a/src/planner/expression_binder/where_binder.cpp
++++ b/src/planner/expression_binder/where_binder.cpp
+@@ -43,4 +43,11 @@ string WhereBinder::UnsupportedAggregateMessage() {
+ 	return "WHERE clause cannot contain aggregates!";
+ }
+ 
++bool WhereBinder::QualifyColumnAlias(const ColumnRefExpression &colref) {
++	if (column_alias_binder) {
++		return column_alias_binder->QualifyColumnAlias(colref);
++	}
++	return false;
++}
++
+ } // namespace duckdb

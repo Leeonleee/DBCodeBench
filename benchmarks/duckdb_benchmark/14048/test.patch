@@ -1,0 +1,40 @@
+diff --git a/test/sql/catalog/did_you_mean.test b/test/sql/catalog/did_you_mean.test
+index bac86754556f..92d25f7f20ab 100644
+--- a/test/sql/catalog/did_you_mean.test
++++ b/test/sql/catalog/did_you_mean.test
+@@ -22,3 +22,35 @@ statement error
+ SELECT * FROM bye;
+ ----
+ Did you mean "test.bye
++
++statement ok
++CREATE SCHEMA a;
++CREATE TABLE a.foo(name text);
++
++statement error
++SELECT * FROM foo;
++----
++Did you mean "a.foo"?
++
++statement ok
++CREATE SCHEMA b;
++CREATE TABLE b.foo(name text);
++
++statement error
++SELECT * FROM foo;
++----
++Did you mean "a.foo or b.foo"?
++
++statement ok
++CREATE SCHEMA c;
++CREATE TABLE c.foo(name text);
++
++statement error
++SELECT * FROM foo;
++----
++Did you mean "a.foo, b.foo, or c.foo"?
++
++statement error
++SELECT * FROM a.fooo;
++----
++Did you mean "foo"?

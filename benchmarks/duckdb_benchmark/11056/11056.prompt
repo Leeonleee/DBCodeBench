@@ -1,0 +1,66 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+CSV read, INTERNAL Error: Attempted to access index 1 within vector of size 1
+### What happens?
+
+Hi,
+I try to read a big CSV file and I have INTERNAL Error.
+
+### To Reproduce
+
+I cannot attach a sample file, because it's big.
+
+The source is a CSV, with delim=";" https://opencoesione.gov.it/media/open_data//progetti_esteso_20231231.zip
+
+Decompress it and get the top 290k lines:
+
+```bash
+progetti_esteso_20231231.zip
+<progetti_esteso_20231231.csv head -n 290000 >tmp.csv
+```
+
+Then I run
+
+```
+duckdb --csv -c "SET preserve_insertion_order=false;SELECT count(*) FROM read_csv_auto('tmp.csv',parallel=false,all_varchar=true)"
+```
+
+and I have 
+
+```
+Error: INTERNAL Error: Attempted to access index 1 within vector of size 1
+```
+
+### OS:
+
+Debian 12
+
+### DuckDB Version:
+
+v0.10.0 20b1486d11
+
+### DuckDB Client:
+
+0.10.0
+
+### Full Name:
+
+Andrea Borruso
+
+### Affiliation:
+
+onData
+
+### Have you tried this on the latest [nightly build](https://duckdb.org/docs/installation/?version=main)?
+
+I have not tested with any build
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

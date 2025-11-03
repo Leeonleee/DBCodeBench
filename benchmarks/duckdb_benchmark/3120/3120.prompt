@@ -1,0 +1,61 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Querying INFORMATION_SCHEMA in uppercase results in error
+#### What happens?
+A short, clear and concise description of what the bug is.
+After connecting to an in-memory database in Python, querying tables from "INFORMATION_SCHEMA" results in an error. With 0.3.2, after querying it once using lowercase `information_schema`, subsequent queries succeed regardless of case. With 0.3.3-dev255 the query seems to be always case sensitive.
+
+#### To Reproduce
+Steps to reproduce the behavior. Bonus points if those are only SQL queries. 
+```
+import duckdb
+db=duckdb.connect(":memory:")
+db.query("""select * from INFORMATION_SCHEMA.tables""")
+```
+Throws `RuntimeError: Catalog Error: Schema with name INFORMATION_SCHEMA does not exist!`
+
+
+
+#### Environment (please complete the following information):
+ - OS: Mac OS X
+ - DuckDB Version: 0.3.2, 0.3.3-dev255
+ - DuckDB Client: Python
+
+#### Before Submitting
+
+- [X] **Have you tried this on the latest `master` branch?**
+
+- [X] **Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?**
+
+Querying INFORMATION_SCHEMA in uppercase results in error
+#### What happens?
+A short, clear and concise description of what the bug is.
+After connecting to an in-memory database in Python, querying tables from "INFORMATION_SCHEMA" results in an error. With 0.3.2, after querying it once using lowercase `information_schema`, subsequent queries succeed regardless of case. With 0.3.3-dev255 the query seems to be always case sensitive.
+
+#### To Reproduce
+Steps to reproduce the behavior. Bonus points if those are only SQL queries. 
+```
+import duckdb
+db=duckdb.connect(":memory:")
+db.query("""select * from INFORMATION_SCHEMA.tables""")
+```
+Throws `RuntimeError: Catalog Error: Schema with name INFORMATION_SCHEMA does not exist!`
+
+
+
+#### Environment (please complete the following information):
+ - OS: Mac OS X
+ - DuckDB Version: 0.3.2, 0.3.3-dev255
+ - DuckDB Client: Python
+
+#### Before Submitting
+
+- [X] **Have you tried this on the latest `master` branch?**
+
+- [X] **Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?**
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

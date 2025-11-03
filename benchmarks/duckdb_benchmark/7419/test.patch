@@ -1,0 +1,31 @@
+diff --git a/test/sql/pragma/test_show_tables.test b/test/sql/pragma/test_show_tables.test
+index ad5fb0e1e337..17a2bf825cbe 100644
+--- a/test/sql/pragma/test_show_tables.test
++++ b/test/sql/pragma/test_show_tables.test
+@@ -20,9 +20,15 @@ CREATE SCHEMA s1;
+ statement ok
+ CREATE TABLE s1.tbl(i INTEGER UNIQUE);
+ 
++statement ok
++CREATE INDEX my_index ON s1.tbl(i);
++
+ statement ok
+ CREATE TABLE tbl(i INTEGER PRIMARY KEY);
+ 
++statement ok
++CREATE INDEX not_a_table ON tbl(i);
++
+ # We test that right table is described (from s1 schema)
+ # column_name | column_type | null | key | default | extra
+ query TTTITI
+@@ -30,6 +36,10 @@ DESCRIBE s1.tbl;
+ ----
+ i	INTEGER	YES	UNI	NULL	NULL
+ 
++# We test that the index can't be described
++statement error
++DESCRIBE my_index;
++
+ # We test that right table is described (from main schema)
+ # column_name | column_type | null | key | default | extra
+ query TTTITI

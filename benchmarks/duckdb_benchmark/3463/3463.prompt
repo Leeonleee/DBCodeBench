@@ -1,0 +1,57 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+list_contains doesn't handle prior selections correctly
+#### What happens?
+When `list_contains` is not the first predicate, it doesn't handle the previous selection correctly.
+
+#### To Reproduce
+```sql
+SELECT function_name, return_type, parameter_types
+FROM duckdb_functions()
+WHERE function_type = 'scalar' AND list_has(parameter_types, 'TIMESTAMP')
+```
+
+#### Environment (please complete the following information):
+ - OS: OSX
+ - DuckDB Version: 0.3.3.-dev
+ - DuckDB Client: Shell
+
+#### Before Submitting
+
+- [X] **Have you tried this on the latest `master` branch?**
+* **Python**: `pip install duckdb --upgrade --pre`
+* **R**: `install.packages("https://github.com/duckdb/duckdb/releases/download/master-builds/duckdb_r_src.tar.gz", repos = NULL)`
+* **Other Platforms**: You can find binaries [here](https://github.com/duckdb/duckdb/releases/tag/master-builds) or compile from source.
+
+- [X] **Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?**
+
+list_contains doesn't handle prior selections correctly
+#### What happens?
+When `list_contains` is not the first predicate, it doesn't handle the previous selection correctly.
+
+#### To Reproduce
+```sql
+SELECT function_name, return_type, parameter_types
+FROM duckdb_functions()
+WHERE function_type = 'scalar' AND list_has(parameter_types, 'TIMESTAMP')
+```
+
+#### Environment (please complete the following information):
+ - OS: OSX
+ - DuckDB Version: 0.3.3.-dev
+ - DuckDB Client: Shell
+
+#### Before Submitting
+
+- [X] **Have you tried this on the latest `master` branch?**
+* **Python**: `pip install duckdb --upgrade --pre`
+* **R**: `install.packages("https://github.com/duckdb/duckdb/releases/download/master-builds/duckdb_r_src.tar.gz", repos = NULL)`
+* **Other Platforms**: You can find binaries [here](https://github.com/duckdb/duckdb/releases/tag/master-builds) or compile from source.
+
+- [X] **Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?**
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

@@ -1,0 +1,49 @@
+diff --git a/test/sql/function/list/flatten.test b/test/sql/function/list/flatten.test
+index cf1f2e8e240d..a492799806e7 100644
+--- a/test/sql/function/list/flatten.test
++++ b/test/sql/function/list/flatten.test
+@@ -124,3 +124,19 @@ SELECT i, flatten([[1, 2], [3, 4]]) FROM nested_lists
+ 1	[1, 2, 3, 4]
+ 2	[1, 2, 3, 4]
+ 3	[1, 2, 3, 4]
++
++# Issue #6856 - flatten() segfaults when called on bad input
++statement error
++select flatten(42);
++----
++No function matches the given name and argument types
++
++statement error
++select flatten([1, 2]);
++----
++No function matches the given name and argument types
++
++query I
++select flatten(NULL);
++----
++NULL
+diff --git a/test/sql/types/union/union_list.test b/test/sql/types/union/union_list.test
+index bf5305016bdd..4fe7590512d1 100644
+--- a/test/sql/types/union/union_list.test
++++ b/test/sql/types/union/union_list.test
+@@ -69,20 +69,6 @@ SELECT union_list[1] FROM tbl2 JOIN tbl1 ON union_with_list.num = union_list[1];
+ statement ok
+ CREATE TABLE tbl3 (union_with_lists UNION(strs VARCHAR[], nums INT[]));
+ 
+-# This doesnt work since casting to list costs the same
+-statement error 
+-INSERT INTO tbl3 VALUES 
+-    (['one', 'two']), 
+-    ([1, 2]), 
+-    (['three', NULL]), 
+-    ([3, 4]),
+-    (['five']), 
+-    ([5]), 
+-    (['six']), 
+-    ([NULL, 6]), 
+-    (union_value(strs:=NULL)), 
+-
+-
+ statement ok 
+ INSERT INTO tbl3 VALUES 
+     (union_value(strs:=['one', 'two'])), 

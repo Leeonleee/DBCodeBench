@@ -1,0 +1,57 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Triggered an INTERNAL Error: BoundExpression::GetExpression called on empty bound expression
+### What happens?
+
+When trying to query a JSON file and unnesting its contents, I encountered the above error message:
+
+```sql
+select list_transform(unnest(Item), x -> unnest(x)) from 'https://gist.githubusercontent.com/tobilg/9d7cb9422f3d65fd93fca23e93cb22dc/raw/0df6fbeddad395fb67dc0eac9c87fab6d55e78a3/ddb_export.json';
+```
+
+Error message:
+`Error: INTERNAL Error: BoundExpression::GetExpression called on empty bound expression`
+
+After that, when I try to run another query in the CLI, e.g. `select 1;`, I see the following error:
+
+`Error: FATAL Error: Failed: database has been invalidated because of a previous fatal error. The database must be restarted prior to being used again.`
+
+and have to restart the CLI to continue.
+
+### To Reproduce
+
+See the queries above.
+
+### OS:
+
+MacOS
+
+### DuckDB Version:
+
+0.9.2
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+Tobi M.
+
+### Affiliation:
+
+none
+
+### Have you tried this on the latest `main` branch?
+
+I have tested with a release build (and could not test with a main build)
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

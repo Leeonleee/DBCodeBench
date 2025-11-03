@@ -1,0 +1,1606 @@
+---
+title: "final_graphs.md"
+output: html_document
+date: "2025-10-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overall Model Results
+## Unbiased pass@k
+
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh",
+  "claude-sonnet-4.5_thinking_0",
+  "claude-sonnet-4.5_thinking_8k",
+  "claude-sonnet-4.5_thinking_24k"
+  )
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"        = "Claude Sonnet 4",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names))
+
+# reshape pass@k columns into long format
+
+unbiased <- df_filtered %>%
+  select(model, starts_with("unbiased_pass_at_")) %>%
+  pivot_longer(
+    cols = starts_with("unbiased_pass_at_"),
+    names_to = "k",
+    values_to = "value"
+  ) %>%
+  mutate(
+    k = as.integer(str_extract(k, "\\d+"))
+  )
+
+# plot
+p <- ggplot(unbiased, aes(x = k, y = value, color = model, shape = model)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  labs(
+    title = "pass@k on DBCode-Bench",
+    subtitle = "Default model settings",
+    x = "Number of attempts (k)",
+    y = "pass@k (%)",
+    color = "Model",
+    shape = "Model"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "right",
+    legend.text = element_text(size = 10),
+    legend.title = element_text(size = 11)
+  )
+shape_map <- c(
+  "GPT-5"           = 16,
+  "o3"              = 17,
+  "Claude Sonnet 4" = 15,
+  "Gemini 2.5 Pro"  = 18,
+  "gpt-oss-120b"    = 3,
+  "Qwen3 Coder"     = 4,
+  "Kimi K2 0905"    = 8,
+  "GPT-4o"          = 7
+)
+
+p +
+  scale_shape_manual(values = shape_map)
+
+
+ggsave("graphs/overall/unbiased_pass_at_k.pdf", plot = p, width = 6, height = 4, device = "pdf")
+```
+
+## First-Try Success Rate
+
+```{r}
+library(ggplot2)
+library(readr)
+library(scales)
+library(dplyr)
+
+library(knitr)
+library(kableExtra)
+library(stringr)
+
+
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh"
+  )
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"        = "Claude Sonnet 4",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4 (8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4 (16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4 (24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names))
+
+
+p <- ggplot(df_filtered, aes(x = model, y = task_success_rate, fill = model)) +
+  geom_col() +
+  geom_text(
+    aes(label = scales::percent(task_success_rate, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  labs(
+    title = "First-Try Success Rate on DBCode-Bench",
+    subtitle = "Default model settings",
+    x = "Model",
+    y = "First-Try Success Rate (%)",
+    fill = "Model"
+  ) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 0.45)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+
+ggsave("graphs/overall/task_success_rate.pdf", plot = p, width = 6, height = 4, device = "pdf")
+```
+
+## Average Build Success Rate
+
+```{r}
+library(ggplot2)
+library(readr)
+library(scales)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh"
+  )
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"        = "Claude Sonnet 4",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names))
+
+p <- ggplot(df_filtered, aes(x = model, y = avg_build_success_rate, fill = model)) +
+  geom_col() +
+  geom_text(
+    aes(label = scales::percent(avg_build_success_rate, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  labs(
+    title = "Model Average Build Success Rate on DBCode-Bench",
+    subtitle = "Default model settings",
+    x = "Model",
+    y = "Average Build Success Rate (%)"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent,
+    limits = c(0, 1)
+    ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+ggsave("graphs/overall/avg_build_success_rate.pdf", plot = p, width = 6, height = 4, device = "pdf")
+```
+
+## Compilation vs Test Success
+
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh"
+)
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"           = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"        = "GPT-5",
+  "gpt-5_reasoninghigh"          = "GPT-5 (High Reasoning)",
+  "o3"                           = "o3",
+  "claude-sonnet-4_thinking0"    = "Claude Sonnet 4",
+  "claude-sonnet-4_thinking8k"   = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"  = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"  = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"               = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"    = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium" = "gpt-oss-120b",
+  "gpt-oss-120b_reasoninghigh"   = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                  = "Qwen3 Coder",
+  "kimi-k2-0905"                 = "Kimi K2 0905",
+  "gpt-4o"                       = "GPT-4o"
+)
+
+# Filter and rename; let factors follow alphabetical order
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names)) %>%
+  arrange(model)   # alphabetical by pretty name
+
+# Per-generation funnel: GREEN bottom, ORANGE middle, RED top
+df_funnel <- df_filtered %>%
+  transmute(
+    model,
+    failed_build       = 1 - avg_build_success_rate,
+    built_failed_test  = avg_build_success_rate - avg_test_success_rate,
+    built_passed_test  = avg_test_success_rate
+  ) %>%
+  pivot_longer(
+    cols = c(failed_build, built_failed_test, built_passed_test),
+    names_to = "stage",
+    values_to = "rate"
+  ) %>%
+  mutate(
+    stage = factor(stage,
+                   levels = c( "failed_build", "built_failed_test", "built_passed_test"))
+  )
+
+stage_labels <- c(
+  "failed_build"      = "Failed to compile",
+  "built_failed_test" = "Compiled & tests failed",
+  "built_passed_test" = "Compiled & tests passed"
+)
+
+p <- ggplot(df_funnel, aes(x = model, y = rate, fill = stage)) +
+  geom_col() +
+  geom_text(
+    aes(label = percent(rate, accuracy = 0.1)),
+    position = position_stack(vjust = 0.5),
+    color = "black", size = 3.5
+  ) +
+  labs(
+    title = "Compilation/Test Success Breakdown on DBCode-Bench",
+    subtitle = "Default model settings",
+    x = "Model",
+    y = "Percentage of Generations",
+    fill = "Outcome"
+  ) +
+  scale_y_continuous(labels = percent, limits = c(0, 1)) +
+  scale_fill_manual(
+    values = c(
+      
+      "failed_build"       = "#e74c3c",
+      "built_passed_test"  = "#27ae60",
+      "built_failed_test"  = "#f39c12"
+    ),
+    labels = stage_labels
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p
+ggsave("graphs/overall/compilation_vs_success.pdf", plot = p, width = 7, height = 5, device = "pdf")
+```
+
+# Reasoning Comparison
+
+## Claude Sonnet 4
+
+## pass@k
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+metric_family <- "unbiased"  # or "empirical"
+
+# 2) Which models to include + in what ORDER
+models_include <- c(
+  "claude-sonnet-4_thinking0",
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k"
+)
+
+# 3) Pretty labels for legend (only for the models you use)
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"         = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+# Filter to the selected models (and keep their order)
+df_sel <- df %>%
+  filter(model %in% models_include) %>%
+  mutate(model = factor(model, levels = models_include))
+
+# Choose the metric columns by family
+prefix <- if (metric_family == "unbiased") "unbiased_pass_at_" else "empirical_pass_at_"
+metric_cols <- paste0(prefix, 1:5)
+
+# Long form for plotting + table
+long <- df_sel %>%
+  select(model, all_of(metric_cols)) %>%
+  pivot_longer(
+    cols = all_of(metric_cols),
+    names_to = "metric",
+    values_to = "score"
+  ) %>%
+  mutate(
+    k = as.integer(sub(".*_(\\d+)$", "\\1", metric)),
+    model_label = recode(as.character(model), !!!model_names),
+    # Keep legend order matching models_include (using pretty labels)
+    model_label = factor(model_label, levels = recode(models_include, !!!model_names))
+  )
+
+# ==== Plot ====
+p <- ggplot(long, aes(x = k, y = score, color = model_label, shape = model_label, group = model_label)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 3) +
+  scale_x_continuous(breaks = 1:5) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title = "pass@k Across Reasoning Configurations",
+    subtitle = "Claude Sonnet 4: 0-24k thinking token budgets on DBCode-Bench",
+    x = "Number of attempts (k)",
+    y = "pass@k (%)",
+    color = "Model",
+    shape = "Model"
+  ) +
+  # ---- Add this manual shape scale ----
+  scale_shape_manual(values = c(16, 17, 15, 18)) +  # one for each model in models_include
+  theme_bw() +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(),
+    legend.text = element_text(),
+    plot.title = element_text(face = "bold")
+  )
+
+
+p
+
+out_pdf <- sprintf("graphs/reasoning/reasoning_pass_at_k_%s_claude.pdf", metric_family)
+ggsave(out_pdf, plot = p, width = 8, height = 4.5, device = "pdf")
+```
+
+### Average Build Success Rate
+
+```{r}
+library(ggplot2)
+library(readr)
+library(scales)
+library(dplyr)
+library(stringr)
+library(knitr)
+library(kableExtra)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+# ---- Set custom order here ----
+custom_order <- c(
+  "claude-sonnet-4_thinking0",
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k"
+)
+
+exclude_models <- c(
+  "o3",
+  "gemini-2.5-pro",
+  "qwen3-coder",
+  "kimi-k2-0905",
+  "gpt-4o",
+  
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoningmedium",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoningmedium",
+  "gpt-oss-120b_reasoninghigh"
+)
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"         = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename, applying custom order
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names)) %>%
+  mutate(model = factor(model, levels = recode(custom_order, !!!model_names))) %>%
+  arrange(model)
+
+# ---- Plot ----
+p <- ggplot(df_filtered, aes(x = model, y = avg_build_success_rate, fill = model)) +
+  geom_col() +
+  
+  geom_text(
+    aes(label = scales::percent(avg_build_success_rate, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  labs(
+    title = "Average Build Success Rate Across Reasoning Configurations",
+    subtitle = "Claude Sonnet 4: 0-24k thinking token budgets on DBCode-Bench",
+    x = "Model",
+    y = "Average Build Success Rate (%)"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent,
+    limits = c(0, 1)
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+
+ggsave("graphs/reasoning/reasoning_avg_build_success_rate_claude.pdf", plot = p, width = 6, height = 4, device = "pdf")
+```
+
+### Compilation vs Test Success
+
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+# ---- Set custom order here ----
+custom_order <- c(
+  "claude-sonnet-4_thinking0",
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k"
+)
+
+exclude_models <- c(
+  "o3",
+  "gemini-2.5-pro",
+  "qwen3-coder",
+  "kimi-k2-0905",
+  "gpt-4o",
+  
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoningmedium",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoningmedium",
+  "gpt-oss-120b_reasoninghigh"
+)
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"           = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"        = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"          = "GPT-5 (High Reasoning)",
+  "o3"                           = "o3",
+  "claude-sonnet-4_thinking0"    = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"   = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"  = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"  = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"               = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"    = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium" = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"   = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                  = "Qwen3 Coder",
+  "kimi-k2-0905"                 = "Kimi K2 0905",
+  "gpt-4o"                       = "GPT-4o"
+)
+
+# Filter, rename, and apply custom order
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(
+    model = recode(model, !!!model_names),
+    model = factor(model, levels = recode(custom_order, !!!model_names))
+  ) %>%
+  arrange(model)
+
+# Per-generation funnel: GREEN bottom, ORANGE middle, RED top
+df_funnel <- df_filtered %>%
+  transmute(
+    model,
+    failed_build       = 1 - avg_build_success_rate,
+    built_failed_test  = avg_build_success_rate - avg_test_success_rate,
+    built_passed_test  = avg_test_success_rate
+  ) %>%
+  pivot_longer(
+    cols = c(failed_build, built_failed_test, built_passed_test),
+    names_to = "stage",
+    values_to = "rate"
+  ) %>%
+  mutate(
+    # enforce stack order: green (pass) → orange (failed tests) → red (failed build)
+#    stage = factor(stage,
+#                   levels = c("built_passed_test", "built_failed_test", "failed_build"))
+    
+    stage = factor(stage,
+                   levels = c("failed_build", "built_failed_test", "built_passed_test"))
+  )
+
+# Optional: clearer labels
+stage_labels <- c(
+  "failed_build" = "Failed to compile",
+  "built_failed_test" = "Compiled & tests failed",
+  "built_passed_test" = "Compiled & tests passed"
+)
+
+# Keep your plot code, but update labels:
+p <- ggplot(df_funnel, aes(x = model, y = rate, fill = stage)) +
+  geom_col() +
+  geom_text(
+    aes(label = scales::percent(rate, accuracy = 0.1)),
+    position = position_stack(vjust = 0.5),
+    color = "black", size = 3.5
+  ) +
+  labs(
+    title = "Compilation/Test Success Breakdown Across Reasoning Configurations",
+    subtitle = "Claude Sonnet 4: 0-24k thinking token budgets on DBCode-Bench",
+    x = "Model",
+    y = "Percentage of Generations",
+    fill = "Outcome"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(
+    values = c(
+      "failed_build" = "#e74c3c",
+      "built_failed_test" = "#f39c12",
+      "built_passed_test" = "#27ae60"
+    ),
+    labels = stage_labels
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p
+ggsave("graphs/reasoning/reasoning_compilation_vs_success_claude.pdf", plot = p, width = 7, height = 4, device = "pdf")
+```
+
+## GPT-5
+
+### pass@k
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+metric_family <- "unbiased"  # or "empirical"
+
+# 2) Which models to include + in what ORDER
+models_include <- c(
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoningmedium",
+  "gpt-5_reasoninghigh"
+)
+
+# 3) Pretty labels for legend (only for the models you use)
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5\n(Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5\n(Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5\n(High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"         = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# ==== Data ====
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+# Filter to the selected models (and keep their order)
+df_sel <- df %>%
+  filter(model %in% models_include) %>%
+  mutate(model = factor(model, levels = models_include))
+
+# Choose the metric columns by family
+prefix <- if (metric_family == "unbiased") "unbiased_pass_at_" else "empirical_pass_at_"
+metric_cols <- paste0(prefix, 1:5)
+
+# Long form for plotting + table
+long <- df_sel %>%
+  select(model, all_of(metric_cols)) %>%
+  pivot_longer(
+    cols = all_of(metric_cols),
+    names_to = "metric",
+    values_to = "score"
+  ) %>%
+  mutate(
+    k = as.integer(sub(".*_(\\d+)$", "\\1", metric)),
+    model_label = recode(as.character(model), !!!model_names),
+    # Keep legend order matching models_include (using pretty labels)
+    model_label = factor(model_label, levels = recode(models_include, !!!model_names))
+  )
+
+# ==== Plot ====
+p <- ggplot(long, aes(x = k, y = score, color = model_label, group = model_label, shape = model_label)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = 1:5) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title = "pass@k Across Reasoning Configurations",
+    subtitle = "GPT-5: Low, Medium, and High Reasoning Efforts on DBCode-Bench",
+    x = "Number of attempts (k)",
+    y = "pass@k (%)",
+    color = "Model",
+    shape = "Model"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(),
+    legend.text = element_text(),
+    plot.title = element_text(face = "bold")
+  ) +
+  # ---- Add this manual shape scale ----
+  scale_shape_manual(values = c(16, 17, 15))
+
+p
+out_pdf <- sprintf("graphs/reasoning/reasoning_pass_at_k_%s_gpt5.pdf", metric_family)
+ggsave(out_pdf, plot = p, width = 8, height = 4.5, device = "pdf")
+```
+
+### Average Build Success Rate
+
+```{r}
+
+library(ggplot2)
+library(readr)
+library(scales)
+library(dplyr)
+library(stringr)
+library(knitr)
+library(kableExtra)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+# ---- Set custom order here ----
+custom_order <- c(
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoningmedium",
+  "gpt-5_reasoninghigh"
+)
+
+exclude_models <- c(
+  "o3",
+  "gemini-2.5-pro",
+  "qwen3-coder",
+  "kimi-k2-0905",
+  "gpt-4o",
+  
+  "claude-sonnet-4_thinking0",
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoningmedium",
+  "gpt-oss-120b_reasoninghigh"
+)
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5\n(Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5\n(Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5\n(High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"         = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename, applying custom order
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names)) %>%
+  mutate(model = factor(model, levels = recode(custom_order, !!!model_names))) %>%
+  arrange(model)
+
+# ---- Plot ----
+p <- ggplot(df_filtered, aes(x = model, y = avg_build_success_rate, fill = model)) +
+  geom_col() +
+  
+  geom_text(
+    aes(label = scales::percent(avg_build_success_rate, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  labs(
+    title = "Average Build Success Rate Across Reasoning Configurations",
+    subtitle = "GPT-5: Low, Medium, and High Reasoning Efforts on DBCode-Bench",
+    x = "Model",
+    y = "Average Build Success Rate (%)"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent,
+    limits = c(0, 1)
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+ggsave("graphs/reasoning/reasoning_avg_build_success_rate_gpt5.pdf", plot = p, width = 6, height = 4, device = "pdf")
+```
+
+### Compilation vs Test Success
+
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+# ---- Set custom order here ----
+custom_order <- c(
+  
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoningmedium",
+  "gpt-5_reasoninghigh"
+)
+
+exclude_models <- c(
+  "o3",
+  "gemini-2.5-pro",
+  "qwen3-coder",
+  "kimi-k2-0905",
+  "gpt-4o",
+  
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoningmedium",
+  "gpt-oss-120b_reasoninghigh",
+  
+  "claude-sonnet-4_thinking0",
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k"
+)
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"           = "GPT-5\n(Low Reasoning)",
+  "gpt-5_reasoningmedium"        = "GPT-5\n(Medium Reasoning)",
+  "gpt-5_reasoninghigh"          = "GPT-5\n(High Reasoning)",
+  "o3"                           = "o3",
+  "claude-sonnet-4_thinking0"    = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"   = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"  = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"  = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"               = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"    = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium" = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"   = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                  = "Qwen3 Coder",
+  "kimi-k2-0905"                 = "Kimi K2 0905",
+  "gpt-4o"                       = "GPT-4o"
+)
+
+# Filter, rename, and apply custom order
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(
+    model = recode(model, !!!model_names),
+    model = factor(model, levels = recode(custom_order, !!!model_names))
+  ) %>%
+  arrange(model)
+
+# Per-generation funnel: GREEN bottom, ORANGE middle, RED top
+df_funnel <- df_filtered %>%
+  transmute(
+    model,
+    failed_build       = 1 - avg_build_success_rate,
+    built_failed_test  = avg_build_success_rate - avg_test_success_rate,
+    built_passed_test  = avg_test_success_rate
+  ) %>%
+  pivot_longer(
+    cols = c(failed_build, built_failed_test, built_passed_test),
+    names_to = "stage",
+    values_to = "rate"
+  ) %>%
+  mutate(
+    # enforce stack order: green (pass) → orange (failed tests) → red (failed build)
+#    stage = factor(stage,
+#                   levels = c("built_passed_test", "built_failed_test", "failed_build"))
+    
+    stage = factor(stage,
+                   levels = c("failed_build", "built_failed_test", "built_passed_test"))
+  )
+
+# Optional: clearer labels
+stage_labels <- c(
+  "failed_build" = "Failed to compile",
+  "built_failed_test" = "Compiled & tests failed",
+  "built_passed_test" = "Compiled & tests passed"
+)
+
+# Keep your plot code, but update labels:
+p <- ggplot(df_funnel, aes(x = model, y = rate, fill = stage)) +
+  geom_col() +
+  geom_text(
+    aes(label = scales::percent(rate, accuracy = 0.1)),
+    position = position_stack(vjust = 0.5),
+    color = "black", size = 3.5
+  ) +
+  labs(
+    title = "Compilation/Test Success Breakdown Across Reasoning Configurations",
+    subtitle = "GPT-5: Low, Medium, and High Reasoning Efforts on DBCode-Bench",
+    x = "Model",
+    y = "Percentage of Generations",
+    fill = "Outcome"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(
+    values = c(
+      "failed_build" = "#e74c3c",
+      "built_failed_test" = "#f39c12",
+      "built_passed_test" = "#27ae60"
+    ),
+    labels = stage_labels
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p
+ggsave("graphs/reasoning/reasoning_compilation_vs_success_gpt5.pdf", plot = p, width = 7, height = 4, device = "pdf")
+```
+
+## gpt-oss-120b
+
+### pass@k
+
+```{r}
+
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+metric_family <- "unbiased"  # or "empirical"
+
+# 2) Which models to include + in what ORDER
+models_include <- c(
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoningmedium",
+  "gpt-oss-120b_reasoninghigh"
+)
+
+# 3) Pretty labels for legend (only for the models you use)
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"         = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b\n(Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b\n(Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b\n(High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# 4) Output paths
+if (!dir.exists("graphs")) dir.create("graphs", recursive = TRUE)
+if (!dir.exists("tables")) dir.create("tables", recursive = TRUE)
+out_pdf <- sprintf("graphs/reasoning/reasoning_pass_at_k_%s_oss.pdf", metric_family)
+out_tex <- sprintf("tables/reasoning/reasoning_pass_at_k_%s_oss.tex", metric_family)
+
+# ==== Data ====
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+# Filter to the selected models (and keep their order)
+df_sel <- df %>%
+  filter(model %in% models_include) %>%
+  mutate(model = factor(model, levels = models_include))
+
+# Choose the metric columns by family
+prefix <- if (metric_family == "unbiased") "unbiased_pass_at_" else "empirical_pass_at_"
+metric_cols <- paste0(prefix, 1:5)
+
+# Long form for plotting + table
+long <- df_sel %>%
+  select(model, all_of(metric_cols)) %>%
+  pivot_longer(
+    cols = all_of(metric_cols),
+    names_to = "metric",
+    values_to = "score"
+  ) %>%
+  mutate(
+    k = as.integer(sub(".*_(\\d+)$", "\\1", metric)),
+    model_label = recode(as.character(model), !!!model_names),
+    # Keep legend order matching models_include (using pretty labels)
+    model_label = factor(model_label, levels = recode(models_include, !!!model_names))
+  )
+
+# ==== Plot ====
+p <- ggplot(long, aes(x = k, y = score, color = model_label, group = model_label, shape = model_label)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = 1:5) +
+  scale_y_continuous(labels = percent_format(accuracy = 1)) +
+  labs(
+    title = "pass@k Across Reasoning Configurations",
+    subtitle = "gpt-oss-120b: Low, Medium, and High Reasoning Efforts on DBCode-Bench",
+    x = "Number of attempts (k)",
+    y = "pass@k (%)",
+    color = "Model",
+    shape = "Model"
+  ) +
+  theme_bw() +
+  theme(
+    legend.position = "right",
+    legend.title = element_text(),
+    legend.text = element_text(),
+    plot.title = element_text(face = "bold")
+  ) +
+  scale_shape_manual(values = c(16, 17, 15))  # one for each model in models_include
+
+p
+out_pdf <- sprintf("graphs/reasoning/reasoning_pass_at_k_%s_oss.pdf", metric_family)
+ggsave(out_pdf, plot = p, width = 8, height = 4.5, device = "pdf")
+```
+
+### Average Build Success Rate
+
+```{r}
+library(ggplot2)
+library(readr)
+library(scales)
+library(dplyr)
+library(stringr)
+library(knitr)
+library(kableExtra)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+# ---- Set custom order here ----
+custom_order <- c(
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoningmedium",
+  "gpt-oss-120b_reasoninghigh"
+)
+
+exclude_models <- c(
+  "o3",
+  "gemini-2.5-pro",
+  "qwen3-coder",
+  "kimi-k2-0905",
+  "gpt-4o",
+  
+  "claude-sonnet-4_thinking0",
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoningmedium",
+  "gpt-5_reasoninghigh"
+  
+  
+)
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"         = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b\n(Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b\n(Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b\n(High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename, applying custom order
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names)) %>%
+  mutate(model = factor(model, levels = recode(custom_order, !!!model_names))) %>%
+  arrange(model)
+
+# ---- Plot ----
+p <- ggplot(df_filtered, aes(x = model, y = avg_build_success_rate, fill = model)) +
+  geom_col() +
+  
+  geom_text(
+    aes(label = scales::percent(avg_build_success_rate, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  labs(
+    title = "Average Build Success Rate Across Reasoning Configurations",
+    subtitle = "gpt-oss-120b: Low, Medium, and High Reasoning Efforts on DBCode-Bench",
+    x = "Model",
+    y = "Average Build Success Rate (%)"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent,
+    limits = c(0, 1)
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+ggsave("graphs/reasoning/reasoning_avg_build_success_rate_oss.pdf", plot = p, width = 6, height = 4, device = "pdf")
+```
+
+### Compilation vs Test Success
+
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+# ---- Set custom order here ----
+custom_order <- c(
+  
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoningmedium",
+  "gpt-oss-120b_reasoninghigh"
+)
+
+exclude_models <- c(
+  "o3",
+  "gemini-2.5-pro",
+  "qwen3-coder",
+  "kimi-k2-0905",
+  "gpt-4o",
+  
+  
+  "claude-sonnet-4_thinking0",
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoningmedium",
+  "gpt-5_reasoninghigh"
+)
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"           = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"        = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"          = "GPT-5 (High Reasoning)",
+  "o3"                           = "o3",
+  "claude-sonnet-4_thinking0"    = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"   = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"  = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"  = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"               = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"    = "gpt-oss-120b\n(Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium" = "gpt-oss-120b\n(Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"   = "gpt-oss-120b\n(High Reasoning)",
+  "qwen3-coder"                  = "Qwen3 Coder",
+  "kimi-k2-0905"                 = "Kimi K2 0905",
+  "gpt-4o"                       = "GPT-4o"
+)
+
+# Filter, rename, and apply custom order
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(
+    model = recode(model, !!!model_names),
+    model = factor(model, levels = recode(custom_order, !!!model_names))
+  ) %>%
+  arrange(model)
+
+# Per-generation funnel: GREEN bottom, ORANGE middle, RED top
+df_funnel <- df_filtered %>%
+  transmute(
+    model,
+    failed_build       = 1 - avg_build_success_rate,
+    built_failed_test  = avg_build_success_rate - avg_test_success_rate,
+    built_passed_test  = avg_test_success_rate
+  ) %>%
+  pivot_longer(
+    cols = c(failed_build, built_failed_test, built_passed_test),
+    names_to = "stage",
+    values_to = "rate"
+  ) %>%
+  mutate(
+    # enforce stack order: green (pass) → orange (failed tests) → red (failed build)
+#    stage = factor(stage,
+#                   levels = c("built_passed_test", "built_failed_test", "failed_build"))
+    
+    stage = factor(stage,
+                   levels = c("failed_build", "built_failed_test", "built_passed_test"))
+  )
+
+# Optional: clearer labels
+stage_labels <- c(
+  "failed_build" = "Failed to compile",
+  "built_failed_test" = "Compiled & tests failed",
+  "built_passed_test" = "Compiled & tests passed"
+)
+
+# Keep your plot code, but update labels:
+p <- ggplot(df_funnel, aes(x = model, y = rate, fill = stage)) +
+  geom_col() +
+  geom_text(
+    aes(label = scales::percent(rate, accuracy = 0.1)),
+    position = position_stack(vjust = 0.5),
+    color = "black", size = 3.5
+  ) +
+  labs(
+    title = "Compilation/Test Success Breakdown Across Reasoning Configurations",
+    subtitle = "gpt-oss-120b: Low, Medium, and High Reasoning Efforts on DBCode-Bench",
+    x = "Model",
+    y = "Percentage of Generations",
+    fill = "Outcome"
+  ) +
+  scale_y_continuous(labels = scales::percent) +
+  scale_fill_manual(
+    values = c(
+      "failed_build" = "#e74c3c",
+      "built_failed_test" = "#f39c12",
+      "built_passed_test" = "#27ae60"
+    ),
+    labels = stage_labels
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p
+ggsave("graphs/reasoning/reasoning_compilation_vs_success_oss.pdf", plot = p, width = 7, height = 4, device = "pdf")
+```
+# Difficulty
+
+## Lines Changed
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(readr)
+
+df <- read.csv("../analysis_results/difficulties.csv")
+
+# Bins to match your difficulty buckets
+breaks <- c(0, 5, 10, 20, 50, 100, Inf)
+labels <- c("1–5", "6–10", "11–20", "21–50", "51–100", "100+")
+
+df_binned <- df %>%
+  mutate(
+    lines_bucket = cut(
+      lines_changed,
+      breaks = breaks,
+      labels = labels,
+      right = TRUE,
+      include.lowest = TRUE,
+      ordered_result = TRUE
+    )
+  )
+
+plot_df <- df_binned %>%
+  count(lines_bucket) %>%
+  mutate(
+    pct = n / sum(n),
+    lines_bucket = factor(lines_bucket, levels = labels, ordered = TRUE) # lock order
+  )
+
+p <- ggplot(plot_df, aes(x = lines_bucket, y = pct)) +
+  geom_col(width = 0.8, fill = "grey50") +
+    geom_text(
+    aes(label = scales::percent(pct, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(
+    title = "Distribution of Tasks by Lines Changed",
+    subtitle = "Proportion of benchmark tasks across patch size buckets",
+    x = "Number of lines changed",
+    y = "Percentage of Tasks (%)"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+ggsave("graphs/difficulty/problems_by_lines_changed.pdf", plot = p, width = 6, height = 4, device = "pdf")
+```
+
+## Number of Files Modified
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(readr)
+
+# Read CSV
+df <- read.csv("../analysis_results/difficulties.csv")
+
+# Custom bins for number of files modified
+breaks <- c(0, 1, 3, 5, 10, Inf)
+labels <- c("1", "2–3", "4–5", "6–10", "11+")
+
+plot_df <- df %>%
+  mutate(
+    files_bucket = cut(
+      files_changed_in_diff,   # <- or switch to `files_in_modified_files` if that's your field
+      breaks = breaks,
+      labels = labels,
+      right = TRUE,
+      include.lowest = TRUE,
+      ordered_result = TRUE
+    )
+  ) %>%
+  count(files_bucket) %>%
+  mutate(
+    pct = n / sum(n),
+    files_bucket = factor(files_bucket, levels = labels, ordered = TRUE) # lock order
+  )
+
+p <- ggplot(plot_df, aes(x = files_bucket, y = pct)) +
+  geom_col(width = 0.8, fill = "grey50") +
+    geom_text(
+    aes(label = scales::percent(pct, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(
+    title = "Distribution of Tasks by Number of Source Code Files Modified ",
+    subtitle = "Proportion of benchmark tasks across file-count buckets",
+    x = "Number of Source Code Files Modified",
+    y = "Percentage of Tasks (%)"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+ggsave("graphs/difficulty/problems_by_files_modified.pdf", plot = p, width = 6, height = 4, device = "pdf")
+```
+
+## Number of Tests Modified
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(readr)
+
+# Read CSV
+df <- read.csv("../analysis_results/difficulties.csv")
+
+# Custom bins for number of test files modified
+breaks <- c(-1, 0, 1, 2, 5, Inf)  
+labels <- c("0", "1", "2", "3–5", "6+")
+
+plot_df <- df %>%
+  mutate(
+    test_bucket = cut(
+      test_files_modified,
+      breaks = breaks,
+      labels = labels,
+      right = TRUE,
+      include.lowest = TRUE,
+      ordered_result = TRUE
+    )
+  ) %>%
+  count(test_bucket) %>%
+  mutate(
+    pct = n / sum(n),
+    test_bucket = factor(test_bucket, levels = labels, ordered = TRUE) # lock order
+  )
+
+p <- ggplot(plot_df, aes(x = test_bucket, y = pct)) +
+  geom_col(width = 0.8, fill = "grey50") +
+    geom_text(
+    aes(label = scales::percent(pct, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(
+    title = "Distribution of Tasks by Number of Test Files Modified",
+    subtitle = "Proportion of tasks across test-file buckets",
+    x = "Number of Test Files Modified",
+    y = "Percentage of Tasks (%)"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p
+ggsave("graphs/difficulty/problems_by_test_files_modified.pdf", plot = p, width = 6, height = 4, device = "pdf")
+```
+## pass@5 vs difficulty
+
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(purrr)
+library(stringr)
+
+# ---------- 1) Point to your per-model CSVs ----------
+files <- c(
+  "../analysis_results/claude-sonnet-4_thinking0_problems.csv",
+  "../analysis_results/gemini-2.5-pro_problems.csv",
+  "../analysis_results/gpt-4o_problems.csv",
+  "../analysis_results/gpt-5_reasoningmedium_problems.csv",
+  "../analysis_results/gpt-oss-120b_reasoningmedium_problems.csv",
+  "../analysis_results/kimi-k2-0905_problems.csv",
+  "../analysis_results/o3_problems.csv",
+  "../analysis_results/qwen3-coder_problems.csv"
+)
+
+# ---------- 2) Read and tag model ----------
+read_with_model <- function(path) {
+  model <- basename(path) |> str_remove("_problems\\.csv$")
+  read_csv(path, show_col_types = FALSE) |> mutate(model = model)
+}
+
+results_all <- map_dfr(files, read_with_model)
+
+# ---------- 3) Load difficulty metadata ----------
+difficulty <- read_csv("../analysis_results/difficulties.csv", show_col_types = FALSE)
+
+# ---------- 4) Join + choose pass@5 ----------
+df <- results_all |>
+  inner_join(difficulty, by = "problem_id") |>
+  mutate(pass5 = unbiased_pass_at_5)
+
+# ---------- 5) Define pretty model names ----------
+model_names <- c(
+  "claude-sonnet-4_thinking0"          = "Claude Sonnet 4",
+  "gemini-2.5-pro"                     = "Gemini 2.5 Pro",
+  "gpt-4o"                             = "GPT-4o",
+  "gpt-5_reasoningmedium"              = "GPT-5",
+  "gpt-oss-120b_reasoningmedium"       = "gpt-oss-120b",
+  "kimi-k2-0905"                       = "Kimi K2 0905",
+  "o3"                                 = "o3",
+  "qwen3-coder"                        = "Qwen3 Coder"
+)
+
+df <- df |>
+  mutate(
+    model_label = recode(model, !!!model_names),
+    model_label = factor(model_label, levels = sort(unique(recode(model, !!!model_names))))
+  )
+
+# ---------- 6) Bucket helpers ----------
+bucket_lines <- function(x) cut(x,
+  breaks = c(0, 5, 10, 20, 50, 100, Inf),
+  labels = c("1-5","6-10","11-20","21-50","51-100","100+"),
+  include.lowest = TRUE, right = TRUE
+)
+
+bucket_files <- function(x) case_when(
+  x == 1 ~ "1",
+  x >= 2 & x <= 3 ~ "2-3",
+  x >= 4 & x <= 5 ~ "4-5",
+  x >= 6 & x <= 10 ~ "6-10",
+  x >= 11 ~ "11+",
+  TRUE ~ NA_character_
+)
+
+bucket_tests <- function(x) case_when(
+  x == 1 ~ "1",
+  x == 2 ~ "2",
+  x >= 3 & x <= 5 ~ "3-5",
+  x >= 6 ~ "6+",
+  TRUE ~ NA_character_
+)
+
+# ---------- 7) General plotting function ----------
+plot_lines <- function(data, bucket_col, levels, title, xlab) {
+  agg <- data |>
+    group_by(model_label, bucket = factor(.data[[bucket_col]], levels = levels)) |>
+    summarise(pass5 = mean(pass5, na.rm = TRUE), .groups = "drop")
+
+  ggplot(agg, aes(bucket, pass5, group = model_label, color = model_label, shape = model_label)) +
+    geom_line(linewidth = 1) +
+    geom_point(size = 3) +
+    scale_y_continuous(labels = percent_format()) +
+    labs(
+      title = title,
+      subtitle = "Default model settings",
+      x = xlab,
+      y = "pass@5 (%)",
+      color = "Model",
+      shape = "Model"
+    ) +
+    scale_shape_manual(values = c(16, 17, 15, 18, 3, 4, 8, 7)) +
+    theme_minimal(base_size = 13) +
+    theme(
+      legend.position = "right",
+      legend.spacing.y = unit(6, "pt"),
+      legend.title = element_text(),
+      legend.text = element_text()
+    ) +
+    guides(color = guide_legend(byrow = TRUE), shape = guide_legend(byrow = TRUE))
+}
+
+# ---------- 8) Generate Plots ----------
+# A) Lines changed
+df_lines <- df |> mutate(lines_bucket = bucket_lines(lines_changed))
+p_lines  <- plot_lines(df_lines, "lines_bucket",
+                       c("1-5","6-10","11-20","21-50","51-100","100+"),
+                       "pass@5 vs Number of Lines Changed",
+                       "Number of Lines Changed")
+
+# B) Files modified
+df_files <- df |> mutate(files_bucket = bucket_files(files_changed_in_diff))
+p_files  <- plot_lines(df_files, "files_bucket",
+                       c("1","2-3","4-5","6-10","11+"),
+                       "pass@5 vs Number of Source Files Modified",
+                       "Number of Source Files Modified")
+
+# C) Test files modified
+df_tests <- df |> mutate(tests_bucket = bucket_tests(test_files_modified))
+p_tests  <- plot_lines(df_tests, "tests_bucket",
+                       c("1","2","3-5","6+"),
+                       "pass@5 vs Number of Test Files Modified",
+                       "Number of Test Files Modified")
+
+# ---------- 9) Display ----------
+p_lines
+p_files
+p_tests
+
+ggsave("graphs/difficulty/pass5_vs_lines_changed_lines.pdf", p_lines, width = 8, height = 5)
+ggsave("graphs/difficulty/pass5_vs_files_modified_lines.pdf", p_files, width = 8, height = 5)
+ggsave("graphs/difficulty/pass5_vs_tests_modified_lines.pdf", p_tests, width = 8, height = 5)
+```

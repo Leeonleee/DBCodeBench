@@ -1,0 +1,16 @@
+diff --git a/test/sql/function/list/list_inner_product.test b/test/sql/function/list/list_inner_product.test
+index 0430f04b9854..e1f76969b7d0 100644
+--- a/test/sql/function/list/list_inner_product.test
++++ b/test/sql/function/list/list_inner_product.test
+@@ -1,6 +1,11 @@
+ # name: test/sql/function/list/list_inner_product.test
+ # group: [list]
+ 
++query I
++SELECT list_inner_product([], []);
++----
++0.0
++
+ foreach type FLOAT DOUBLE
+ 
+ query I

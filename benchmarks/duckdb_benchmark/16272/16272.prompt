@@ -1,0 +1,100 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Array ordering regression in release 1.2.0
+### What happens?
+
+Duckdb 1.2.0 seems to sort arrays by value, ignoring order by expressions. This was not happening in duckdb 1.1.3 ( i.e. the order was consistent with the expression) 
+
+
+### To Reproduce
+
+```sql
+select array(select * from unnest(['a', 'b']) as _t(u) order by if(u='a',100, 1)) as out;
+select array(select * from unnest(['a', 'b']) as _t(u) order by if(u='a',100, 1) desc) as out;
+```
+
+in duckdb 1.1.3 it returns 
+```
+select array(select * from unnest(['a', 'b']) as _t(u) order by if(u='a',100, 1)) as out;
+┌───────────┐
+│    out    │
+│ varchar[] │
+├───────────┤
+│ [b, a]    │
+└───────────┘
+```
+```
+select array(select * from unnest(['a', 'b']) as _t(u) order by if(u='a',100, 1) desc) as out;
+┌───────────┐
+│    out    │
+│ varchar[] │
+├───────────┤
+│ [a, b]    │
+└───────────┘
+```
+
+whereas in duckdb 1.2.0 I get 
+```
+select array(select * from unnest(['a', 'b']) as _t(u) order by if(u='a',100, 1)) as out;
+┌───────────┐
+│    out    │
+│ varchar[] │
+├───────────┤
+│ [a, b]    │
+└───────────┘
+```
+```
+select array(select * from unnest(['a', 'b']) as _t(u) order by if(u='a',100, 1) desc) as out;
+┌───────────┐
+│    out    │
+│ varchar[] │
+├───────────┤
+│ [b, a]    │
+└───────────┘
+```
+
+### OS:
+
+MacOS 15 (aarch64) Python 3.11.6 . Also fails on linux ubuntu 22.04, x86 Python 3.11.6
+
+### DuckDB Version:
+
+1.2.0
+
+### DuckDB Client:
+
+Python
+
+### Hardware:
+
+_No response_
+
+### Full Name:
+
+Chinmoy Mandayam
+
+### Affiliation:
+
+Actively
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [x] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [x] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

@@ -1,0 +1,27 @@
+diff --git a/test/sql/variables/test_variables.test b/test/sql/variables/test_variables.test
+index ad3c15d43f57..b67d81686222 100644
+--- a/test/sql/variables/test_variables.test
++++ b/test/sql/variables/test_variables.test
+@@ -13,6 +13,22 @@ SELECT GETVARIABLE('animal')
+ ----
+ duck
+ 
++statement ok
++PREPARE v1 AS SELECT GETVARIABLE($1);
++
++query I
++EXECUTE v1('animal');
++----
++duck
++
++statement ok
++CREATE MACRO _(x) AS getvariable(x);
++
++query I
++SELECT _('animal')
++----
++duck
++
+ # overwriting
+ statement ok
+ SET VARIABLE animal='bird'

@@ -1,0 +1,59 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Internal Binding Error on Lateral JOIN
+### What happens?
+
+Raised in #7732 by @l1t1, the following query results in an internal error:
+
+```sql
+WITH abc AS (
+     SELECT UNNEST([[1, 2, 3], [4, 5]]) AS A, UNNEST([[6], [7, 8]]) AS B
+ )
+ SELECT newa, newb
+ FROM abc,
+ lateral (select unnest(a) newa, unnest(b) newb );
+```
+
+Error is 
+
+```
+Error: INTERNAL Error: Failed to bind column reference "delim_index" [23.0] (bindings: [1.0 15.0 15.1])
+```
+
+### To Reproduce
+
+See above 
+
+### OS:
+
+OSX
+
+### DuckDB Version:
+
+dev
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+Hannes Mühleisen
+
+### Affiliation:
+
+DuckDB Labs
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

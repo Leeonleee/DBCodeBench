@@ -1,0 +1,62 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Export/Import issue regarding parquet and ROW_GROUP_SIZE
+### What happens?
+
+When try to export with the next command:
+
+EXPORT DATABASE 'target_directory' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000);
+the 
+IMPORT is not working.
+
+This is a very minor issue
+I only want to point out this
+
+
+See reproduce section:
+
+
+### To Reproduce
+
+> EXPORT DATABASE 'target_directory' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000);
+
+The import is not working
+
+> import database 'target_directory';
+Error: Not implemented Error: Unsupported option for COPY FROM parquet: ROW_GROUP_SIZE
+
+A workaround is to edit the 'load.sql'  command and remove the ROW_GROUP_SIZE
+
+### OS:
+
+Ubuntu 22.04
+
+### DuckDB Version:
+
+0.61
+
+### DuckDB Client:
+
+duckdb client
+
+### Full Name:
+
+Bert Tijhuis
+
+### Affiliation:
+
+Private interest in this project
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

@@ -1,0 +1,372 @@
+---
+title: "difficulty"
+author: "Leon Lee"
+date: "2025-09-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Lines Changed Distribution
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(readr)
+
+df <- read.csv("../analysis_results/difficulties.csv")
+
+# Bins to match your difficulty buckets
+breaks <- c(0, 5, 10, 20, 50, 100, Inf)
+labels <- c("1–5", "6–10", "11–20", "21–50", "51–100", "100+")
+
+df_binned <- df %>%
+  mutate(
+    lines_bucket = cut(
+      lines_changed,
+      breaks = breaks,
+      labels = labels,
+      right = TRUE,
+      include.lowest = TRUE,
+      ordered_result = TRUE
+    )
+  )
+
+plot_df <- df_binned %>%
+  count(lines_bucket) %>%
+  mutate(
+    pct = n / sum(n),
+    lines_bucket = factor(lines_bucket, levels = labels, ordered = TRUE) # lock order
+  )
+
+p <- ggplot(plot_df, aes(x = lines_bucket, y = pct)) +
+  geom_col(width = 0.8, fill = "grey50") +
+    geom_text(
+    aes(label = scales::percent(pct, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(
+    title = "Problems by Lines Changed",
+    subtitle = "Share of problems by patch size bucket",
+    x = "Lines changed",
+    y = "Percentage of Problems"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+
+# Export to PDF (consistent size with other charts)
+if (!dir.exists("graphs")) dir.create("graphs", recursive = TRUE)
+ggsave("graphs/difficulty/problems_by_lines_changed.pdf", plot = p, width = 6, height = 4, device = "pdf")
+
+# ---- Table (LaTeX): Problems by Lines Changed ----
+library(knitr)
+library(kableExtra)
+
+table_df <- plot_df %>%
+  transmute(
+    Bucket = as.character(lines_bucket),
+    Count = n,
+    `Percentage (\\%)` = sprintf("%.1f\\%%", pct * 100)
+  )
+
+if (!dir.exists("tables")) dir.create("tables", recursive = TRUE)
+
+latex_tbl <- kable(
+  table_df,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Distribution of problems by lines changed (bucketed).",
+  label = "tab:problems-by-lines-changed",
+  align = c("l","r","c"),
+  escape = FALSE
+) %>% 
+  kable_styling(latex_options = c("hold_position"))
+
+save_kable(latex_tbl, "tables/difficulty/problems_by_lines_changed.tex")
+
+```
+
+# Number of Files Modified
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(readr)
+
+# Read CSV
+df <- read.csv("../analysis_results/difficulties.csv")
+
+# Custom bins for number of files modified
+breaks <- c(0, 1, 3, 5, 10, Inf)
+labels <- c("1", "2–3", "4–5", "6–10", "11+")
+
+plot_df <- df %>%
+  mutate(
+    files_bucket = cut(
+      files_changed_in_diff,   # <- or switch to `files_in_modified_files` if that's your field
+      breaks = breaks,
+      labels = labels,
+      right = TRUE,
+      include.lowest = TRUE,
+      ordered_result = TRUE
+    )
+  ) %>%
+  count(files_bucket) %>%
+  mutate(
+    pct = n / sum(n),
+    files_bucket = factor(files_bucket, levels = labels, ordered = TRUE) # lock order
+  )
+
+p <- ggplot(plot_df, aes(x = files_bucket, y = pct)) +
+  geom_col(width = 0.8, fill = "grey50") +
+    geom_text(
+    aes(label = scales::percent(pct, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(
+    title = "Problems by Number of Files Modified",
+    subtitle = "Share of problems by file-count bucket",
+    x = "Files modified (bucket)",
+    y = "Percentage of Problems"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+
+# Export to PDF (consistent size with other charts)
+if (!dir.exists("graphs")) dir.create("graphs", recursive = TRUE)
+ggsave("graphs/difficulty/problems_by_files_modified.pdf", plot = p, width = 6, height = 4, device = "pdf")
+
+# ---- Table (LaTeX): Problems by Number of Files Modified ----
+library(knitr)
+library(kableExtra)
+
+table_df <- plot_df %>%
+  transmute(
+    Bucket = as.character(files_bucket),
+    Count = n,
+    `Percentage (\\%)` = sprintf("%.1f\\%%", pct * 100)
+  )
+
+if (!dir.exists("tables")) dir.create("tables", recursive = TRUE)
+
+latex_tbl <- kable(
+  table_df,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Distribution of problems by number of files modified (bucketed).",
+  label = "tab:problems-by-files-modified",
+  align = c("l","r","c"),
+  escape = FALSE
+) %>% 
+  kable_styling(latex_options = c("hold_position"))
+
+save_kable(latex_tbl, "tables/difficulty/problems_by_files_modified.tex")
+
+```
+
+# Number of Tests Modified
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(readr)
+
+# Read CSV
+df <- read.csv("../analysis_results/difficulties.csv")
+
+# Custom bins for number of test files modified
+breaks <- c(-1, 0, 1, 2, 5, Inf)  
+labels <- c("0", "1", "2", "3–5", "6+")
+
+plot_df <- df %>%
+  mutate(
+    test_bucket = cut(
+      test_files_modified,
+      breaks = breaks,
+      labels = labels,
+      right = TRUE,
+      include.lowest = TRUE,
+      ordered_result = TRUE
+    )
+  ) %>%
+  count(test_bucket) %>%
+  mutate(
+    pct = n / sum(n),
+    test_bucket = factor(test_bucket, levels = labels, ordered = TRUE) # lock order
+  )
+
+p <- ggplot(plot_df, aes(x = test_bucket, y = pct)) +
+  geom_col(width = 0.8, fill = "grey50") +
+    geom_text(
+    aes(label = scales::percent(pct, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  scale_y_continuous(labels = percent_format(accuracy = 1), limits = c(0, 1)) +
+  labs(
+    title = "Problems by Number of Test Files Modified",
+    subtitle = "Share of problems by test-file bucket",
+    x = "Test files modified (bucket)",
+    y = "Percentage of Problems"
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p
+
+# Export to PDF (consistent size with other charts)
+if (!dir.exists("graphs")) dir.create("graphs", recursive = TRUE)
+ggsave("graphs/difficulty/problems_by_test_files_modified.pdf", plot = p, width = 6, height = 4, device = "pdf")
+
+# ---- Table (LaTeX): Problems by Number of Test Files Modified ----
+library(knitr)
+library(kableExtra)
+
+table_df <- plot_df %>%
+  transmute(
+    Bucket = as.character(test_bucket),
+    Count = n,
+    `Percentage (\\%)` = sprintf("%.1f\\%%", pct * 100)
+  )
+
+if (!dir.exists("tables")) dir.create("tables", recursive = TRUE)
+
+latex_tbl <- kable(
+  table_df,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Distribution of problems by number of test files modified (bucketed).",
+  label = "tab:problems-by-test-files-modified",
+  align = c("l","r","c"),
+  escape = FALSE
+) %>% 
+  kable_styling(latex_options = c("hold_position"))
+
+save_kable(latex_tbl, "tables/difficulty/problems_by_test_files_modified.tex")
+
+```
+
+# Success Rates by Lines Changed
+
+
+
+# Success by difficulty metrics
+```{r}
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(scales)
+library(purrr)
+library(stringr)
+
+# 1) Point to your per-model CSVs (you can add more here)
+files <- c(
+  "../analysis_results/claude-sonnet-4_thinking0_problems.csv",
+  "../analysis_results/gemini-2.5-pro_problems.csv",
+  "../analysis_results/gpt-4o_problems.csv",
+  "../analysis_results/gpt-5_reasoningmedium_problems.csv",
+  "../analysis_results/gpt-oss-120b_reasoningmedium_problems.csv",
+  "../analysis_results/kimi-k2-0905_problems.csv",
+  "../analysis_results/o3_problems.csv",
+  "../analysis_results/qwen3-coder_problems.csv"
+)
+
+# 2) Read and tag model from filename
+read_with_model <- function(path) {
+  model <- basename(path) |>
+    str_remove("_problems\\.csv$")        # e.g., "gemini-2.5-pro"
+  read_csv(path, show_col_types = FALSE) |>
+    mutate(model = model)
+}
+
+results_all <- map_dfr(files, read_with_model)
+
+# 3) Load difficulty metadata
+difficulty <- read_csv("../analysis_results/difficulties.csv", show_col_types = FALSE)
+
+# 4) Join + choose pass@5 (same as task success for you)
+df <- results_all |>
+  inner_join(difficulty, by = "problem_id") |>
+  mutate(pass5 = unbiased_pass_at_5)
+
+# 5) Bucket helpers
+bucket_lines <- function(x) cut(x,
+  breaks = c(0, 5, 10, 20, 50, 100, Inf),
+  labels = c("1-5","6-10","11-20","21-50","51-100","100+"),
+  include.lowest = TRUE, right = TRUE
+)
+
+bucket_files <- function(x) case_when(
+  x == 1 ~ "1",
+  x >= 2 & x <= 3 ~ "2-3",
+  x >= 4 & x <= 5 ~ "4-5",
+  x >= 6 & x <= 10 ~ "6-10",
+  TRUE ~ "6-10"
+)
+
+bucket_tests <- function(x) case_when(
+  x == 1 ~ "1",
+  x == 2 ~ "2",
+  x >= 3 & x <= 5 ~ "3-5",
+  x >= 6 ~ "6+",
+  TRUE ~ "6+"
+)
+
+# 6) Minimal “line-per-model” plotter
+plot_lines <- function(data, bucket_col, levels, title, xlab) {
+  agg <- data |>
+    group_by(model, bucket = factor(.data[[bucket_col]], levels = levels)) |>
+    summarise(pass5 = mean(pass5, na.rm = TRUE), .groups = "drop")
+
+  ggplot(agg, aes(bucket, pass5, group = model, color = model)) +
+    geom_line(linewidth = 1) +
+    geom_point(size = 2) +
+    scale_y_continuous(labels = percent_format()) +
+    labs(title = title, x = xlab, y = "pass@1", color = "Model") +
+    theme_minimal(base_size = 13)
+}
+
+# ---------- PLOTS ----------
+# A) Lines changed
+df_lines <- df |> mutate(lines_bucket = bucket_lines(lines_changed))
+p_lines  <- plot_lines(df_lines, "lines_bucket",
+                       c("1-5","6-10","11-20","21-50","51-100","100+"),
+                       "pass@5 vs Lines Changed", "Lines Changed (bucketed)")
+
+# B) Files modified
+df_files <- df |> mutate(files_bucket = bucket_files(files_changed_in_diff))
+p_files  <- plot_lines(df_files, "files_bucket",
+                       c("1","2-3","4-5","6-10"),
+                       "pass@5 vs Files Modified", "Files Modified (bucketed)")
+
+# C) Test files modified
+df_tests <- df |> mutate(tests_bucket = bucket_tests(test_files_modified))
+p_tests  <- plot_lines(df_tests, "tests_bucket",
+                       c("1","2","3-5","6+"),
+                       "pass@5 vs Test Files Modified", "Test Files Modified (bucketed)")
+p_lines
+p_files
+p_tests
+# Optional: save
+ggsave("graphs/difficulty/pass5_vs_lines_changed_lines.pdf", p_lines, width = 8, height = 5)
+ggsave("graphs/difficulty/pass5_vs_files_modified_lines.pdf", p_files, width = 8, height = 5)
+ggsave("graphs/difficulty/pass5_vs_tests_modified_lines.pdf", p_tests, width = 8, height = 5)
+
+```

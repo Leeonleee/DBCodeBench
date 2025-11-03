@@ -1,0 +1,124 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Changed behaviour of getvariable
+### What happens?
+
+with duckdb versions prior to version 1.1.3, i would run this command for ease of use:
+`CREATE MACRO _(x) AS getvariable(x);`
+so that i didn't have to write it each time,
+but now on duckdb 1.2.0 i get back this error:
+`Not implemented Error: getvariable requires a constant input`
+
+1. is this expected?
+2. is there a way to rename it, and in general, to rename functions such as `getvariable` ?
+
+
+
+### To Reproduce
+
+for reproducing, try this command on duckdb 1.1.3 and duckdb 1.2.0:
+`CREATE MACRO _(x) AS getvariable(x);`
+
+### OS:
+
+any
+
+### DuckDB Version:
+
+1.2.0
+
+### DuckDB Client:
+
+any 
+
+### Hardware:
+
+_No response_
+
+### Full Name:
+
+Massimiliano Pizzotti
+
+### Affiliation:
+
+EssilorLuxottica
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [x] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [x] Yes, I have
+Changed behaviour of getvariable
+### What happens?
+
+with duckdb versions prior to version 1.1.3, i would run this command for ease of use:
+`CREATE MACRO _(x) AS getvariable(x);`
+so that i didn't have to write it each time,
+but now on duckdb 1.2.0 i get back this error:
+`Not implemented Error: getvariable requires a constant input`
+
+1. is this expected?
+2. is there a way to rename it, and in general, to rename functions such as `getvariable` ?
+
+
+
+### To Reproduce
+
+for reproducing, try this command on duckdb 1.1.3 and duckdb 1.2.0:
+`CREATE MACRO _(x) AS getvariable(x);`
+
+### OS:
+
+any
+
+### DuckDB Version:
+
+1.2.0
+
+### DuckDB Client:
+
+any 
+
+### Hardware:
+
+_No response_
+
+### Full Name:
+
+Massimiliano Pizzotti
+
+### Affiliation:
+
+EssilorLuxottica
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [x] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [x] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

@@ -1,0 +1,66 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+No function matches 'bitstring(BIT, INTEGER_LITERAL)'
+### What happens?
+
+The [bitstring function](https://duckdb.org/docs/sql/functions/bitstring.html#bitstringbitstring-length) doesn't work. The given example results in this error:
+
+```
+Binder Error: No function matches the given name and argument types 'bitstring(BIT, INTEGER_LITERAL)'. You might need to add explicit type casts.
+	Candidate functions:
+	bitstring(VARCHAR, INTEGER) -> BIT
+
+LINE 1: SELECT bitstring('1010'::BITSTRING, 7);
+```
+
+### To Reproduce
+
+```sql
+SELECT bitstring('1010'::BITSTRING, 7);
+```
+
+### OS:
+
+Linux
+
+### DuckDB Version:
+
+1.0.0
+
+### DuckDB Client:
+
+CLI
+
+### Hardware:
+
+_No response_
+
+### Full Name:
+
+Liam Diprose
+
+### Affiliation:
+
+Liam Diprose
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have not tested with any build
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

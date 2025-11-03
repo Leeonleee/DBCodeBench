@@ -1,0 +1,207 @@
+diff --git a/src/execution/operator/persistent/buffered_csv_reader.cpp b/src/execution/operator/persistent/buffered_csv_reader.cpp
+index 70b47cc30850..6580ef5bccb9 100644
+--- a/src/execution/operator/persistent/buffered_csv_reader.cpp
++++ b/src/execution/operator/persistent/buffered_csv_reader.cpp
+@@ -255,6 +255,22 @@ void BufferedCSVReaderOptions::SetDelimiter(const string &input) {
+ 	}
+ }
+ 
++void BufferedCSVReaderOptions::SetDateFormat(LogicalTypeId type, const string &format, bool read_format) {
++	string error;
++	if (read_format) {
++		auto &date_format = this->date_format[type];
++		error = StrTimeFormat::ParseFormatSpecifier(format, date_format);
++		date_format.format_specifier = format;
++	} else {
++		auto &date_format = this->write_date_format[type];
++		error = StrTimeFormat::ParseFormatSpecifier(format, date_format);
++	}
++	if (!error.empty()) {
++		throw InvalidInputException("Could not parse DATEFORMAT: %s", error.c_str());
++	}
++	has_format[type] = true;
++}
++
+ void BufferedCSVReaderOptions::SetReadOption(const string &loption, const Value &value,
+                                              vector<string> &expected_names) {
+ 	if (SetBaseOption(loption, value)) {
+@@ -299,22 +315,10 @@ void BufferedCSVReaderOptions::SetReadOption(const string &loption, const Value
+ 		force_not_null = ParseColumnList(value, expected_names, loption);
+ 	} else if (loption == "date_format" || loption == "dateformat") {
+ 		string format = ParseString(value, loption);
+-		auto &date_format = this->date_format[LogicalTypeId::DATE];
+-		string error = StrTimeFormat::ParseFormatSpecifier(format, date_format);
+-		date_format.format_specifier = format;
+-		if (!error.empty()) {
+-			throw InvalidInputException("Could not parse DATEFORMAT: %s", error.c_str());
+-		}
+-		has_format[LogicalTypeId::DATE] = true;
++		SetDateFormat(LogicalTypeId::DATE, format, true);
+ 	} else if (loption == "timestamp_format" || loption == "timestampformat") {
+ 		string format = ParseString(value, loption);
+-		auto &timestamp_format = date_format[LogicalTypeId::TIMESTAMP];
+-		string error = StrTimeFormat::ParseFormatSpecifier(format, timestamp_format);
+-		timestamp_format.format_specifier = format;
+-		if (!error.empty()) {
+-			throw InvalidInputException("Could not parse TIMESTAMPFORMAT: %s", error.c_str());
+-		}
+-		has_format[LogicalTypeId::TIMESTAMP] = true;
++		SetDateFormat(LogicalTypeId::TIMESTAMP, format, true);
+ 	} else if (loption == "escape") {
+ 		escape = ParseString(value, loption);
+ 		has_escape = true;
+@@ -332,6 +336,15 @@ void BufferedCSVReaderOptions::SetWriteOption(const string &loption, const Value
+ 
+ 	if (loption == "force_quote") {
+ 		force_quote = ParseColumnList(value, names, loption);
++	} else if (loption == "date_format" || loption == "dateformat") {
++		string format = ParseString(value, loption);
++		SetDateFormat(LogicalTypeId::DATE, format, false);
++	} else if (loption == "timestamp_format" || loption == "timestampformat") {
++		string format = ParseString(value, loption);
++		if (StringUtil::Lower(format) == "iso") {
++			format = "%Y-%m-%dT%H:%M:%S.%fZ";
++		}
++		SetDateFormat(LogicalTypeId::TIMESTAMP, format, false);
+ 	} else {
+ 		throw BinderException("Unrecognized option CSV writer \"%s\"", loption);
+ 	}
+diff --git a/src/function/scalar/date/strftime.cpp b/src/function/scalar/date/strftime.cpp
+index d657dbacabb4..dde17103c042 100644
+--- a/src/function/scalar/date/strftime.cpp
++++ b/src/function/scalar/date/strftime.cpp
+@@ -627,6 +627,25 @@ static unique_ptr<FunctionData> StrfTimeBindFunction(ClientContext &context, Sca
+ 	return make_unique<StrfTimeBindData>(format, format_string);
+ }
+ 
++void StrfTimeFormat::ConvertDateVector(Vector &input, Vector &result, idx_t count) {
++	D_ASSERT(input.GetType().id() == LogicalTypeId::DATE);
++	D_ASSERT(result.GetType().id() == LogicalTypeId::VARCHAR);
++	UnaryExecutor::ExecuteWithNulls<date_t, string_t>(input, result, count,
++	                                                  [&](date_t input, ValidityMask &mask, idx_t idx) {
++		                                                  if (Date::IsFinite(input)) {
++			                                                  dtime_t time(0);
++			                                                  idx_t len = GetLength(input, time, 0, nullptr);
++			                                                  string_t target = StringVector::EmptyString(result, len);
++			                                                  FormatString(input, time, target.GetDataWriteable());
++			                                                  target.Finalize();
++			                                                  return target;
++		                                                  } else {
++			                                                  mask.SetInvalid(idx);
++			                                                  return string_t();
++		                                                  }
++	                                                  });
++}
++
+ template <bool REVERSED>
+ static void StrfTimeFunctionDate(DataChunk &args, ExpressionState &state, Vector &result) {
+ 	auto &func_expr = (BoundFunctionExpression &)state.expr;
+@@ -637,13 +656,21 @@ static void StrfTimeFunctionDate(DataChunk &args, ExpressionState &state, Vector
+ 		ConstantVector::SetNull(result, true);
+ 		return;
+ 	}
+-	UnaryExecutor::ExecuteWithNulls<date_t, string_t>(
+-	    args.data[REVERSED ? 1 : 0], result, args.size(), [&](date_t input, ValidityMask &mask, idx_t idx) {
+-		    if (Date::IsFinite(input)) {
+-			    dtime_t time(0);
+-			    idx_t len = info.format.GetLength(input, time, 0, nullptr);
++	info.format.ConvertDateVector(args.data[REVERSED ? 1 : 0], result, args.size());
++}
++
++void StrfTimeFormat::ConvertTimestampVector(Vector &input, Vector &result, idx_t count) {
++	D_ASSERT(input.GetType().id() == LogicalTypeId::TIMESTAMP);
++	D_ASSERT(result.GetType().id() == LogicalTypeId::VARCHAR);
++	UnaryExecutor::ExecuteWithNulls<timestamp_t, string_t>(
++	    input, result, count, [&](timestamp_t input, ValidityMask &mask, idx_t idx) {
++		    if (Timestamp::IsFinite(input)) {
++			    date_t date;
++			    dtime_t time;
++			    Timestamp::Convert(input, date, time);
++			    idx_t len = GetLength(date, time, 0, nullptr);
+ 			    string_t target = StringVector::EmptyString(result, len);
+-			    info.format.FormatString(input, time, target.GetDataWriteable());
++			    FormatString(date, time, target.GetDataWriteable());
+ 			    target.Finalize();
+ 			    return target;
+ 		    } else {
+@@ -663,23 +690,7 @@ static void StrfTimeFunctionTimestamp(DataChunk &args, ExpressionState &state, V
+ 		ConstantVector::SetNull(result, true);
+ 		return;
+ 	}
+-
+-	UnaryExecutor::ExecuteWithNulls<timestamp_t, string_t>(
+-	    args.data[REVERSED ? 1 : 0], result, args.size(), [&](timestamp_t input, ValidityMask &mask, idx_t idx) {
+-		    if (Timestamp::IsFinite(input)) {
+-			    date_t date;
+-			    dtime_t time;
+-			    Timestamp::Convert(input, date, time);
+-			    idx_t len = info.format.GetLength(date, time, 0, nullptr);
+-			    string_t target = StringVector::EmptyString(result, len);
+-			    info.format.FormatString(date, time, target.GetDataWriteable());
+-			    target.Finalize();
+-			    return target;
+-		    } else {
+-			    mask.SetInvalid(idx);
+-			    return string_t();
+-		    }
+-	    });
++	info.format.ConvertTimestampVector(args.data[REVERSED ? 1 : 0], result, args.size());
+ }
+ 
+ void StrfTimeFun::RegisterFunction(BuiltinFunctions &set) {
+diff --git a/src/function/table/copy_csv.cpp b/src/function/table/copy_csv.cpp
+index 7b6f0dd12382..7c4b12541789 100644
+--- a/src/function/table/copy_csv.cpp
++++ b/src/function/table/copy_csv.cpp
+@@ -314,6 +314,15 @@ static void WriteCSVSink(ClientContext &context, FunctionData &bind_data, Global
+ 		if (csv_data.sql_types[col_idx].id() == LogicalTypeId::VARCHAR) {
+ 			// VARCHAR, just create a reference
+ 			cast_chunk.data[col_idx].Reference(input.data[col_idx]);
++		} else if (options.has_format[LogicalTypeId::DATE] && csv_data.sql_types[col_idx].id() == LogicalTypeId::DATE) {
++			// use the date format to cast the chunk
++			csv_data.options.write_date_format[LogicalTypeId::DATE].ConvertDateVector(
++			    input.data[col_idx], cast_chunk.data[col_idx], input.size());
++		} else if (options.has_format[LogicalTypeId::TIMESTAMP] &&
++		           csv_data.sql_types[col_idx].id() == LogicalTypeId::TIMESTAMP) {
++			// use the timestamp format to cast the chunk
++			csv_data.options.write_date_format[LogicalTypeId::TIMESTAMP].ConvertTimestampVector(
++			    input.data[col_idx], cast_chunk.data[col_idx], input.size());
+ 		} else {
+ 			// non varchar column, perform the cast
+ 			VectorOperations::Cast(input.data[col_idx], cast_chunk.data[col_idx], input.size());
+diff --git a/src/include/duckdb/execution/operator/persistent/buffered_csv_reader.hpp b/src/include/duckdb/execution/operator/persistent/buffered_csv_reader.hpp
+index 937c178bb321..b518a1a7a8cf 100644
+--- a/src/include/duckdb/execution/operator/persistent/buffered_csv_reader.hpp
++++ b/src/include/duckdb/execution/operator/persistent/buffered_csv_reader.hpp
+@@ -123,6 +123,9 @@ struct BufferedCSVReaderOptions {
+ 
+ 	//! The date format to use (if any is specified)
+ 	std::map<LogicalTypeId, StrpTimeFormat> date_format = {{LogicalTypeId::DATE, {}}, {LogicalTypeId::TIMESTAMP, {}}};
++	//! The date format to use for writing (if any is specified)
++	std::map<LogicalTypeId, StrfTimeFormat> write_date_format = {{LogicalTypeId::DATE, {}},
++	                                                             {LogicalTypeId::TIMESTAMP, {}}};
+ 	//! Whether or not a type format is specified
+ 	std::map<LogicalTypeId, bool> has_format = {{LogicalTypeId::DATE, false}, {LogicalTypeId::TIMESTAMP, false}};
+ 
+@@ -137,6 +140,7 @@ struct BufferedCSVReaderOptions {
+ 	void SetReadOption(const string &loption, const Value &value, vector<string> &expected_names);
+ 
+ 	void SetWriteOption(const string &loption, const Value &value);
++	void SetDateFormat(LogicalTypeId type, const string &format, bool read_format);
+ 
+ 	std::string ToString() const;
+ };
+diff --git a/src/include/duckdb/function/scalar/strftime.hpp b/src/include/duckdb/function/scalar/strftime.hpp
+index efe302732d6a..0d9c9de9c107 100644
+--- a/src/include/duckdb/function/scalar/strftime.hpp
++++ b/src/include/duckdb/function/scalar/strftime.hpp
+@@ -91,6 +91,9 @@ struct StrfTimeFormat : public StrTimeFormat {
+ 
+ 	DUCKDB_API static string Format(timestamp_t timestamp, const string &format);
+ 
++	DUCKDB_API void ConvertDateVector(Vector &input, Vector &result, idx_t count);
++	DUCKDB_API void ConvertTimestampVector(Vector &input, Vector &result, idx_t count);
++
+ protected:
+ 	//! The variable-length specifiers. To determine total string size, these need to be checked.
+ 	vector<StrTimeSpecifier> var_length_specifiers;

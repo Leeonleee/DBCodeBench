@@ -1,0 +1,104 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Error when trying to join to alias
+### What happens?
+
+This query fails with `Serialization Error: Cannot copy BoundSubqueryExpression`
+
+### To Reproduce
+
+```sql
+create table orders as
+select 
+    cast(random()*100 as integer) + 1 as customer_id, 
+    date '2020-01-01' + interval (cast(random()*365*10 as integer)) days as order_date,
+    cast(random()*1000 as integer) as order_amount,
+from range(0, 1000)
+order by order_date;
+
+select 
+    (select distinct date_trunc('month', order_date) from orders) as month,
+    (select sum(order_amount) from orders where date_trunc('month', order_date) = month) as revenue;
+```
+
+### OS:
+
+macOS
+
+### DuckDB Version:
+
+v0.6.1 919cad22e8
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+George Fraser
+
+### Affiliation:
+
+Fivetran
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+Error when trying to join to alias
+### What happens?
+
+This query fails with `Serialization Error: Cannot copy BoundSubqueryExpression`
+
+### To Reproduce
+
+```sql
+create table orders as
+select 
+    cast(random()*100 as integer) + 1 as customer_id, 
+    date '2020-01-01' + interval (cast(random()*365*10 as integer)) days as order_date,
+    cast(random()*1000 as integer) as order_amount,
+from range(0, 1000)
+order by order_date;
+
+select 
+    (select distinct date_trunc('month', order_date) from orders) as month,
+    (select sum(order_amount) from orders where date_trunc('month', order_date) = month) as revenue;
+```
+
+### OS:
+
+macOS
+
+### DuckDB Version:
+
+v0.6.1 919cad22e8
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+George Fraser
+
+### Affiliation:
+
+Fivetran
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

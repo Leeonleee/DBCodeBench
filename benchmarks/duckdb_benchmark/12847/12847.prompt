@@ -1,0 +1,68 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Cannot insert into a UNION with two structs without using the `union_value` function
+### What happens?
+
+Cannot insert into a UNION with two structs without using the `union_value` function.  Both unnamed and named structs don't work.
+
+### To Reproduce
+
+```
+create table t3 (id integer, u union(s1 struct(f1 string, f2 int), s2 struct(b1 string)));
+```
+```
+D insert into t3 values (1, row('a'));
+Mismatch Type Error: Type STRUCT(VARCHAR) does not match with STRUCT(f1 VARCHAR, f2 INTEGER). Cannot cast STRUCTs of different size
+LINE 1: insert into t3 values (1, row('a'));
+                                  ^
+D insert into t3 values (1, row('a', 3));
+Mismatch Type Error: Type STRUCT(VARCHAR, INTEGER) does not match with STRUCT(b1 VARCHAR). Cannot cast STRUCTs of different size
+LINE 1: insert into t3 values (1, row('a', 3));
+                                  ^
+D insert into t3 values (1, {b1: 'a'});
+Mismatch Type Error: Type STRUCT(b1 VARCHAR) does not match with STRUCT(f1 VARCHAR, f2 INTEGER). Cannot cast STRUCTs of different size
+LINE 1: insert into t3 values (1, {b1: 'a'})
+                                   ^
+```
+
+### OS:
+
+MacOS
+
+### DuckDB Version:
+
+1.0
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+Robert Yokota
+
+### Affiliation:
+
+Confluent
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

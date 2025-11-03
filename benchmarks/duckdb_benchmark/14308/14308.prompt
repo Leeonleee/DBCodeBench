@@ -1,0 +1,73 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+`corr(x, y)` with constant columns should return `NaN`, not `NULL`
+### What happens?
+
+The `corr` aggregate should return `NaN` when a column is constant, not `NULL`, same as `0 / 0` returns `NaN` not `NULL` anymore since v1.1.
+
+EDIT: can't check right now but it should be verified if the same issue exists for `regr_slope`
+
+
+
+### To Reproduce
+
+```sql
+SELECT 
+    corr(x, x)
+FROM
+    (SELECT 1 AS x UNION ALL SELECT 1 AS x);
+````
+```
+┌────────────┐
+│ corr(x, x) │
+│   double   │
+├────────────┤
+│       NULL │
+└────────────┘
+```
+
+### OS:
+
+Linux
+
+### DuckDB Version:
+
+1.1.0
+
+### DuckDB Client:
+
+Python
+
+### Hardware:
+
+x64
+
+### Full Name:
+
+Soeren Wolfers
+
+### Affiliation:
+
+G-Research
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a nightly build
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Not applicable - the reproduction does not require a data set
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

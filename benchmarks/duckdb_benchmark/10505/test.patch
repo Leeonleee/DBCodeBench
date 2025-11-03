@@ -1,0 +1,17 @@
+diff --git a/test/sql/parser/test_value_functions.test b/test/sql/parser/test_value_functions.test
+index 6d3f44c2d22a..4ad0492d078d 100644
+--- a/test/sql/parser/test_value_functions.test
++++ b/test/sql/parser/test_value_functions.test
+@@ -22,6 +22,12 @@ SELECT UsEr
+ ----
+ duckdb
+ 
++# Issue #10363 - we also prefer table-as-struct over value functions
++query I
++SELECT user FROM (VALUES (42)) user(x)
++----
++{'x': 42}
++
+ # run all SQL value functions
+ # need to run without verification since CURRENT_TIME etc break verification
+ statement ok

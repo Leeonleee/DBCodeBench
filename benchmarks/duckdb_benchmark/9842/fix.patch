@@ -1,0 +1,174 @@
+diff --git a/.github/patches/extensions/postgres_scanner/default_value.patch b/.github/patches/extensions/postgres_scanner/default_value.patch
+new file mode 100644
+index 000000000000..366691c31c27
+--- /dev/null
++++ b/.github/patches/extensions/postgres_scanner/default_value.patch
+@@ -0,0 +1,15 @@
++diff --git a/src/storage/postgres_table_set.cpp b/src/storage/postgres_table_set.cpp
++index 88786cf..bfd37ab 100644
++--- a/src/storage/postgres_table_set.cpp
+++++ b/src/storage/postgres_table_set.cpp
++@@ -205,8 +205,8 @@ string PostgresColumnsToSQL(const ColumnList &columns, const vector<unique_ptr<C
++ 		}
++ 		if (column.Generated()) {
++ 			ss << " GENERATED ALWAYS AS(" << column.GeneratedExpression().ToString() << ")";
++-		} else if (column.DefaultValue()) {
++-			ss << " DEFAULT(" << column.DefaultValue()->ToString() << ")";
+++		} else if (column.HasDefaultValue()) {
+++			ss << " DEFAULT(" << column.DefaultValue().ToString() << ")";
++ 		}
++ 	}
++ 	// print any extra constraints that still need to be printed
+diff --git a/src/catalog/catalog_entry/table_catalog_entry.cpp b/src/catalog/catalog_entry/table_catalog_entry.cpp
+index a652a6d737bc..eabcab062ce9 100644
+--- a/src/catalog/catalog_entry/table_catalog_entry.cpp
++++ b/src/catalog/catalog_entry/table_catalog_entry.cpp
+@@ -136,8 +136,8 @@ string TableCatalogEntry::ColumnsToSQL(const ColumnList &columns, const vector<u
+ 		}
+ 		if (column.Generated()) {
+ 			ss << " GENERATED ALWAYS AS(" << column.GeneratedExpression().ToString() << ")";
+-		} else if (column.DefaultValue()) {
+-			ss << " DEFAULT(" << column.DefaultValue()->ToString() << ")";
++		} else if (column.HasDefaultValue()) {
++			ss << " DEFAULT(" << column.DefaultValue().ToString() << ")";
+ 		}
+ 	}
+ 	// print any extra constraints that still need to be printed
+diff --git a/src/function/table/system/duckdb_columns.cpp b/src/function/table/system/duckdb_columns.cpp
+index 42d8203e7966..fe3e3e637e09 100644
+--- a/src/function/table/system/duckdb_columns.cpp
++++ b/src/function/table/system/duckdb_columns.cpp
+@@ -133,8 +133,8 @@ class TableColumnHelper : public ColumnHelper {
+ 		auto &column = entry.GetColumn(LogicalIndex(col));
+ 		if (column.Generated()) {
+ 			return Value(column.GeneratedExpression().ToString());
+-		} else if (column.DefaultValue()) {
+-			return Value(column.DefaultValue()->ToString());
++		} else if (column.HasDefaultValue()) {
++			return Value(column.DefaultValue().ToString());
+ 		}
+ 		return Value();
+ 	}
+diff --git a/src/function/table/system/pragma_table_info.cpp b/src/function/table/system/pragma_table_info.cpp
+index 38c36098f811..a7a7bc4f9f80 100644
+--- a/src/function/table/system/pragma_table_info.cpp
++++ b/src/function/table/system/pragma_table_info.cpp
+@@ -95,6 +95,17 @@ static void CheckConstraints(TableCatalogEntry &table, const ColumnDefinition &c
+ 	}
+ }
+ 
++static Value DefaultValue(const ColumnDefinition &def) {
++	if (def.Generated()) {
++		return Value(def.GeneratedExpression().ToString());
++	}
++	if (!def.HasDefaultValue()) {
++		return Value();
++	}
++	auto &value = def.DefaultValue();
++	return Value(value.ToString());
++}
++
+ static void PragmaTableInfoTable(PragmaTableOperatorData &data, TableCatalogEntry &table, DataChunk &output) {
+ 	if (data.offset >= table.GetColumns().LogicalColumnCount()) {
+ 		// finished returning values
+@@ -122,8 +133,7 @@ static void PragmaTableInfoTable(PragmaTableOperatorData &data, TableCatalogEntr
+ 		// "notnull", PhysicalType::BOOL
+ 		output.SetValue(3, index, Value::BOOLEAN(not_null));
+ 		// "dflt_value", PhysicalType::VARCHAR
+-		Value def_value = column.DefaultValue() ? Value(column.DefaultValue()->ToString()) : Value();
+-		output.SetValue(4, index, def_value);
++		output.SetValue(4, index, DefaultValue(column));
+ 		// "pk", PhysicalType::BOOL
+ 		output.SetValue(5, index, Value::BOOLEAN(pk));
+ 	}
+diff --git a/src/include/duckdb/parser/column_definition.hpp b/src/include/duckdb/parser/column_definition.hpp
+index 1510186aa494..9c0ae77f4319 100644
+--- a/src/include/duckdb/parser/column_definition.hpp
++++ b/src/include/duckdb/parser/column_definition.hpp
+@@ -31,7 +31,8 @@ class ColumnDefinition {
+ 
+ public:
+ 	//! default_value
+-	const unique_ptr<ParsedExpression> &DefaultValue() const;
++	const ParsedExpression &DefaultValue() const;
++	bool HasDefaultValue() const;
+ 	void SetDefaultValue(unique_ptr<ParsedExpression> default_value);
+ 
+ 	//! type
+diff --git a/src/parser/column_definition.cpp b/src/parser/column_definition.cpp
+index 93dfee0b8761..713618efe04e 100644
+--- a/src/parser/column_definition.cpp
++++ b/src/parser/column_definition.cpp
+@@ -25,11 +25,21 @@ ColumnDefinition ColumnDefinition::Copy() const {
+ 	return copy;
+ }
+ 
+-const unique_ptr<ParsedExpression> &ColumnDefinition::DefaultValue() const {
++const ParsedExpression &ColumnDefinition::DefaultValue() const {
++	if (!HasDefaultValue()) {
++		if (Generated()) {
++			throw InternalException("Calling DefaultValue() on a generated column");
++		}
++		throw InternalException("DefaultValue() called on a column without a default value");
++	}
++	return *expression;
++}
++
++bool ColumnDefinition::HasDefaultValue() const {
+ 	if (Generated()) {
+-		throw InternalException("Calling DefaultValue() on a generated column");
++		return false;
+ 	}
+-	return expression;
++	return expression != nullptr;
+ }
+ 
+ void ColumnDefinition::SetDefaultValue(unique_ptr<ParsedExpression> default_value) {
+diff --git a/src/parser/transform/constraint/transform_constraint.cpp b/src/parser/transform/constraint/transform_constraint.cpp
+index 84b8a409685b..ef601ac47f25 100644
+--- a/src/parser/transform/constraint/transform_constraint.cpp
++++ b/src/parser/transform/constraint/transform_constraint.cpp
+@@ -113,8 +113,9 @@ unique_ptr<Constraint> Transformer::TransformConstraint(duckdb_libpgquery::PGLis
+ 	case duckdb_libpgquery::PG_CONSTR_NULL:
+ 		return nullptr;
+ 	case duckdb_libpgquery::PG_CONSTR_GENERATED_VIRTUAL: {
+-		if (column.DefaultValue()) {
+-			throw InvalidInputException("DEFAULT constraint on GENERATED column \"%s\" is not allowed", column.Name());
++		if (column.HasDefaultValue()) {
++			throw InvalidInputException("\"%s\" has a DEFAULT value set, it can not become a GENERATED column",
++			                            column.Name());
+ 		}
+ 		column.SetGeneratedExpression(TransformExpression(constraint->raw_expr));
+ 		return nullptr;
+diff --git a/src/planner/binder/statement/bind_create_table.cpp b/src/planner/binder/statement/bind_create_table.cpp
+index 2801fad7ac4a..83f49b64a7d1 100644
+--- a/src/planner/binder/statement/bind_create_table.cpp
++++ b/src/planner/binder/statement/bind_create_table.cpp
+@@ -212,10 +212,10 @@ void Binder::BindGeneratedColumns(BoundCreateTableInfo &info) {
+ void Binder::BindDefaultValues(const ColumnList &columns, vector<unique_ptr<Expression>> &bound_defaults) {
+ 	for (auto &column : columns.Physical()) {
+ 		unique_ptr<Expression> bound_default;
+-		if (column.DefaultValue()) {
++		if (column.HasDefaultValue()) {
+ 			// we bind a copy of the DEFAULT value because binding is destructive
+ 			// and we want to keep the original expression around for serialization
+-			auto default_copy = column.DefaultValue()->Copy();
++			auto default_copy = column.DefaultValue().Copy();
+ 			ConstantBinder default_binder(*this, context, "DEFAULT value");
+ 			default_binder.target_type = column.Type();
+ 			bound_default = default_binder.Bind(default_copy);
+diff --git a/src/planner/binder/statement/bind_insert.cpp b/src/planner/binder/statement/bind_insert.cpp
+index 784823debe46..6ea5f1363974 100644
+--- a/src/planner/binder/statement/bind_insert.cpp
++++ b/src/planner/binder/statement/bind_insert.cpp
+@@ -42,8 +42,8 @@ static void CheckInsertColumnCountMismatch(int64_t expected_columns, int64_t res
+ }
+ 
+ unique_ptr<ParsedExpression> ExpandDefaultExpression(const ColumnDefinition &column) {
+-	if (column.DefaultValue()) {
+-		return column.DefaultValue()->Copy();
++	if (column.HasDefaultValue()) {
++		return column.DefaultValue().Copy();
+ 	} else {
+ 		return make_uniq<ConstantExpression>(Value(column.Type()));
+ 	}

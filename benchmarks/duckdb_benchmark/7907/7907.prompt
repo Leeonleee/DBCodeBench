@@ -1,0 +1,104 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+summarize fails on blob columns
+### What happens?
+
+Attempt to run `summarize` on a query with Blob columns fails with a binder error.
+
+### To Reproduce
+
+The minimal repro is:
+
+```sql
+summarize select * from test_all_types();
+```
+
+This fails with the error:
+
+```
+Error: Binder Error: No function matches the given name and argument types 'approx_count_distinct(BLOB)'. [...]
+```
+
+Have verified that this occurs in both the native CLI and DuckDb WASM.
+
+### OS:
+
+MacOS
+
+### DuckDB Version:
+
+v0.8.0 e8e4cea5ec
+
+### DuckDB Client:
+
+CLI (DuckDb shell) and DuckDb WASM
+
+### Full Name:
+
+Antony Courtney
+
+### Affiliation:
+
+MotherDuck
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+summarize fails on blob columns
+### What happens?
+
+Attempt to run `summarize` on a query with Blob columns fails with a binder error.
+
+### To Reproduce
+
+The minimal repro is:
+
+```sql
+summarize select * from test_all_types();
+```
+
+This fails with the error:
+
+```
+Error: Binder Error: No function matches the given name and argument types 'approx_count_distinct(BLOB)'. [...]
+```
+
+Have verified that this occurs in both the native CLI and DuckDb WASM.
+
+### OS:
+
+MacOS
+
+### DuckDB Version:
+
+v0.8.0 e8e4cea5ec
+
+### DuckDB Client:
+
+CLI (DuckDb shell) and DuckDb WASM
+
+### Full Name:
+
+Antony Courtney
+
+### Affiliation:
+
+MotherDuck
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

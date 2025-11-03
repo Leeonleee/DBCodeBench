@@ -1,0 +1,20 @@
+{
+  "repo": "duckdb/duckdb",
+  "pull_number": 8559,
+  "instance_id": "duckdb__duckdb-8559",
+  "issue_numbers": [
+    "6027"
+  ],
+  "base_commit": "a8ce02cc2e740d8973d26ccdb77d0068c69c9124",
+  "patch": "diff --git a/extension/parquet/parquet_extension.cpp b/extension/parquet/parquet_extension.cpp\nindex 9dd41b00b7e1..ed04bc8ce8ec 100644\n--- a/extension/parquet/parquet_extension.cpp\n+++ b/extension/parquet/parquet_extension.cpp\n@@ -201,8 +201,9 @@ class ParquetScanFunction {\n \n \t\tfor (auto &option : info.options) {\n \t\t\tauto loption = StringUtil::Lower(option.first);\n-\t\t\tif (loption == \"compression\" || loption == \"codec\") {\n-\t\t\t\t// CODEC option has no effect on parquet read: we determine codec from the file\n+\t\t\tif (loption == \"compression\" || loption == \"codec\" || loption == \"row_group_size\") {\n+\t\t\t\t// CODEC/COMPRESSION and ROW_GROUP_SIZE options have no effect on parquet read.\n+\t\t\t\t// These options are determined from the file.\n \t\t\t\tcontinue;\n \t\t\t} else if (loption == \"binary_as_string\") {\n \t\t\t\tparquet_options.binary_as_string = true;\n",
+  "test_patch": "diff --git a/test/sql/export/parquet_export.test b/test/sql/export/parquet_export.test\nindex 37bff3abc579..41fa5737ad04 100644\n--- a/test/sql/export/parquet_export.test\n+++ b/test/sql/export/parquet_export.test\n@@ -70,3 +70,36 @@ SELECT SUM(i), SUM(j) FROM integers\n # verify that the not null constraint is still there\n statement error\n INSERT INTO integers VALUES (NULL, NULL)\n+\n+statement ok\n+DROP TABLE integers\n+\n+# now do it with compression and row group size specified\n+statement ok\n+BEGIN TRANSACTION\n+\n+statement ok\n+CREATE TABLE integers(i INTEGER NOT NULL, j INTEGER)\n+\n+statement ok\n+INSERT INTO integers SELECT i, i+1 FROM range(0, 1000) tbl(i)\n+\n+query II nosort sumresult\n+SELECT SUM(i), SUM(j) FROM integers\n+\n+statement ok\n+EXPORT DATABASE '__TEST_DIR__/export_test' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000);\n+\n+statement ok\n+ROLLBACK\n+\n+statement ok\n+IMPORT DATABASE '__TEST_DIR__/export_test'\n+\n+# verify the data is still there\n+query II nosort sumresult\n+SELECT SUM(i), SUM(j) FROM integers\n+\n+# verify that the not null constraint is still there\n+statement error\n+INSERT INTO integers VALUES (NULL, NULL)\n",
+  "problem_statement": "Export/Import issue regarding parquet and ROW_GROUP_SIZE\n### What happens?\n\nWhen try to export with the next command:\r\n\r\nEXPORT DATABASE 'target_directory' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000);\r\nthe \r\nIMPORT is not working.\r\n\r\nThis is a very minor issue\r\nI only want to point out this\r\n\r\n\r\nSee reproduce section:\r\n\n\n### To Reproduce\n\n> EXPORT DATABASE 'target_directory' (FORMAT PARQUET, COMPRESSION ZSTD, ROW_GROUP_SIZE 100000);\r\n\r\nThe import is not working\r\n\r\n> import database 'target_directory';\r\nError: Not implemented Error: Unsupported option for COPY FROM parquet: ROW_GROUP_SIZE\r\n\r\nA workaround is to edit the 'load.sql'  command and remove the ROW_GROUP_SIZE\n\n### OS:\n\nUbuntu 22.04\n\n### DuckDB Version:\n\n0.61\n\n### DuckDB Client:\n\nduckdb client\n\n### Full Name:\n\nBert Tijhuis\n\n### Affiliation:\n\nPrivate interest in this project\n\n### Have you tried this on the latest `master` branch?\n\n- [X] I agree\n\n### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?\n\n- [X] I agree\n",
+  "hints_text": "I had the exact same problem trying to import my (exported) 0.7.2 database after updating to 0.8.0.\r\n\r\nIt's a little unfortunate that the \"export database\" documentation suggests to use this option ;-)",
+  "created_at": "2023-08-13T11:29:01Z",
+  "modified_files": [
+    "extension/parquet/parquet_extension.cpp"
+  ],
+  "modified_test_files": [
+    "test/sql/export/parquet_export.test"
+  ]
+}

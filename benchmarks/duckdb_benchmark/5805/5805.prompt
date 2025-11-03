@@ -1,0 +1,34 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+INTERVAL type missing in ListVector::Search
+#### What happens?
+Attempting to do a look up in a MAP using an INTERVAL value causes an exception to be thrown.
+(within ListVector::Search there is no case to handle PhysicalType::INTERVAL)
+
+#### To Reproduce
+```sql
+statement ok
+create table interval_key as select MAP_FROM_ENTRIES(ARRAY[(('2022-01-02 01:00:00'::TIMESTAMP - '2022-01-01'::TIMESTAMP), 'x'), (('2022-01-02 01:00:00'::TIMESTAMP - '2021-01-01'::TIMESTAMP), 'y')]) col;
+
+query I
+select * from interval_key;
+----
+{1 day 01:00:00=x, 366 days 01:00:00=y}
+
+query I
+select col[('2022-01-02 01:00:00'::TIMESTAMP - '2022-01-01'::TIMESTAMP)] from interval_key;
+----
+[x]
+```
+
+The last query causes the error:
+```
+Actual result:
+Invalid type Error: Invalid Type [LIST]: Invalid type for List Vector Search
+```
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

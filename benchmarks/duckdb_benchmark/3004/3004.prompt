@@ -1,0 +1,16 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Make BufferedCSVReader's MAXIMUM_CSV_LINE_SIZE configurable
+The `MAXIMUM_CSV_LINE_SIZE` setting in `BufferedCSVReader` is [hard coded to 1MB](https://github.com/duckdb/duckdb/blob/477c52aed0075aec926303d4f6b433cd48805a3d/src/include/duckdb/execution/operator/persistent/buffered_csv_reader.hpp#L114-L115). While this is probably sufficient for most, our application allows up to 1MB per column and 2MB per row. As a result, we're unable to load our CSV files using `COPY … FROM …` due to this hard coded limitation.
+
+It would be helpful to have `read_csv_auto` and `COPY … FROM …` both extended to support a `MAXIMUM_CSV_LINE_SIZE` (or similar, perhaps shorter named) parameter to allow the application to override the 1MB default value.
+Make BufferedCSVReader's MAXIMUM_CSV_LINE_SIZE configurable
+The `MAXIMUM_CSV_LINE_SIZE` setting in `BufferedCSVReader` is [hard coded to 1MB](https://github.com/duckdb/duckdb/blob/477c52aed0075aec926303d4f6b433cd48805a3d/src/include/duckdb/execution/operator/persistent/buffered_csv_reader.hpp#L114-L115). While this is probably sufficient for most, our application allows up to 1MB per column and 2MB per row. As a result, we're unable to load our CSV files using `COPY … FROM …` due to this hard coded limitation.
+
+It would be helpful to have `read_csv_auto` and `COPY … FROM …` both extended to support a `MAXIMUM_CSV_LINE_SIZE` (or similar, perhaps shorter named) parameter to allow the application to override the 1MB default value.
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

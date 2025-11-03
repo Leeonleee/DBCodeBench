@@ -1,0 +1,128 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+PostgreSQL incompatibility and inconsistency: Floating point version of `greatest` doesn't ignore `NULL`s
+### What happens?
+
+In PostgreSQL, `greatest(var1, ..., varn)` and `least(var1, ..., varn)` return the greatest and least non-`NULL` arguments, respectively, for all data-types.
+
+In DuckDB, this is true with the exception of only the `greatest` function on floating point datatypes, which returns `NULL` when any argument is `NULL`. 
+
+(FWIW, [the recent SQL standards](https://modern-sql.com/caniuse/greatest-least#null) specify that `greatest` and `least` should always propagate `NULL`s, but I think this can be safely ignored since they did this after a lot of dialects already had made their choices, it doesn't seem like any other system changed in response to this, and certainly DuckDB doesn't seem to adhere to this anywhere else except for the floating point version of `greatest`.) 
+
+PS: This is part two - report bug - of my dissection of https://github.com/duckdb/duckdb/issues/14239, which I closed for being too chaotic.
+
+### To Reproduce
+
+```sql
+SELECT 
+greatest(0::FLOAT, NULL), -- DuckDB returns NULL; PostgreSQL returns 0 
+least(0::FLOAT, NULL), -- both DuckDB and PostgreSQL return 0
+greatest(0::INT, NULL), -- both DuckDB and PostgreSQL return 0
+least(0::INT, NULL) -- both DuckDB and PostgreSQL return 0
+```
+
+### OS:
+
+Ubuntu 20.04, x86_64
+
+### DuckDB Version:
+
+1.1.3
+
+### DuckDB Client:
+
+Python
+
+### Hardware:
+
+_No response_
+
+### Full Name:
+
+Soeren Wolfers
+
+### Affiliation:
+
+G-Research
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Not applicable - the reproduction does not require a data set
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+PostgreSQL incompatibility and inconsistency: Floating point version of `greatest` doesn't ignore `NULL`s
+### What happens?
+
+In PostgreSQL, `greatest(var1, ..., varn)` and `least(var1, ..., varn)` return the greatest and least non-`NULL` arguments, respectively, for all data-types.
+
+In DuckDB, this is true with the exception of only the `greatest` function on floating point datatypes, which returns `NULL` when any argument is `NULL`. 
+
+(FWIW, [the recent SQL standards](https://modern-sql.com/caniuse/greatest-least#null) specify that `greatest` and `least` should always propagate `NULL`s, but I think this can be safely ignored since they did this after a lot of dialects already had made their choices, it doesn't seem like any other system changed in response to this, and certainly DuckDB doesn't seem to adhere to this anywhere else except for the floating point version of `greatest`.) 
+
+PS: This is part two - report bug - of my dissection of https://github.com/duckdb/duckdb/issues/14239, which I closed for being too chaotic.
+
+### To Reproduce
+
+```sql
+SELECT 
+greatest(0::FLOAT, NULL), -- DuckDB returns NULL; PostgreSQL returns 0 
+least(0::FLOAT, NULL), -- both DuckDB and PostgreSQL return 0
+greatest(0::INT, NULL), -- both DuckDB and PostgreSQL return 0
+least(0::INT, NULL) -- both DuckDB and PostgreSQL return 0
+```
+
+### OS:
+
+Ubuntu 20.04, x86_64
+
+### DuckDB Version:
+
+1.1.3
+
+### DuckDB Client:
+
+Python
+
+### Hardware:
+
+_No response_
+
+### Full Name:
+
+Soeren Wolfers
+
+### Affiliation:
+
+G-Research
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Not applicable - the reproduction does not require a data set
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

@@ -1,0 +1,13 @@
+diff --git a/test/sql/table_function/duckdb_indexes.test b/test/sql/table_function/duckdb_indexes.test
+index afe941a13bbc..c739fd149978 100644
+--- a/test/sql/table_function/duckdb_indexes.test
++++ b/test/sql/table_function/duckdb_indexes.test
+@@ -13,3 +13,8 @@ SELECT * FROM duckdb_indexes();
+ 
+ statement ok nosort duckdb_col
+ SELECT * FROM duckdb_indexes;
++
++query I
++select expressions from duckdb_indexes where table_name = 'integers';
++----
++[((j + 1)), k]

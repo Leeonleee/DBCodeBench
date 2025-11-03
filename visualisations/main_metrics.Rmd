@@ -1,0 +1,746 @@
+---
+title: "main_metrics"
+author: "Leon Lee"
+date: "2025-09-08"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+# Task Success Rate (default settings)
+```{r}
+library(ggplot2)
+library(readr)
+library(scales)
+library(dplyr)
+
+library(knitr)
+library(kableExtra)
+library(stringr)
+
+
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh"
+  )
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"        = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4 (8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4 (16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4 (24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names))
+
+
+p <- ggplot(df_filtered, aes(x = model, y = task_success_rate, fill = model)) +
+  geom_col() +
+  geom_text(
+    aes(label = scales::percent(task_success_rate, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  labs(
+    title = "Task Success Rate by Model (First-Try)",
+    subtitle = "Default model settings",
+    x = "Model",
+    y = "Task Success Rate (%)"
+  ) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 0.45)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+    #plot.margin = margin(t = 10, r = 10, b = 10, l = 50)
+  )
+
+p
+
+# Export to pdf
+ggsave("graphs/overall/task_success_rate.pdf", plot = p, width = 6, height = 4, device = "pdf")
+
+
+# --- TABLE from the same data ---
+# Preserve the order shown in the plot (order of appearance)
+levels_order <- unique(df_filtered$model)
+df_ordered <- df_filtered %>%
+  mutate(model = factor(model, levels = levels_order))
+
+# For LaTeX, replace the plot's '\n' with LaTeX line break '\\'
+table_df <- df_ordered %>%
+  transmute(
+    Model = str_replace_all(as.character(model), "\n", "\\\\\n"),
+    `Task Success Rate (\\%)` = sprintf("%.1f\\%%", task_success_rate * 100)
+  )
+
+# Build LaTeX table with booktabs
+latex_tbl <- kable(
+  table_df,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Task success rate (\\%) for each model on first attempt.",
+  label = "tab:task-success-rate",
+  align = c("l", "c"),
+  escape = FALSE,
+  position = "bottom"
+) %>%
+  kable_styling(latex_options = c("hold_position"))  # keeps table near where it's defined
+
+# Save as a standalone .tex you can \input{}
+save_kable(latex_tbl, "tables/overall/task_success_rate.tex")
+```
+
+# Pass@k: Empirical
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh"
+  )
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"        = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names))
+
+# reshape pass@k columns into long format
+
+empirical <- df_filtered %>%
+  select(model, starts_with("empirical_pass_at_")) %>%
+  pivot_longer(
+    cols = starts_with("empirical_pass_at_"),
+    names_to = "k",
+    values_to = "value"
+  ) %>%
+  mutate(
+    k = as.integer(str_extract(k, "\\d+"))
+  )
+
+# plot
+p <- ggplot(empirical, aes(x = k, y = value, color = model)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  labs (
+    title = "Empirical Pass@k",
+    subtitle = "Default model settings",
+    x = "k",
+    y = "Pass@k",
+    color = "Model"
+  ) +
+  theme_bw()
+p
+
+# Export to pdf
+ggsave("graphs/overall/empirical_pass_at_k.pdf", plot = p, width = 6, height = 4, device = "pdf")
+
+# ---- Table (LaTeX) ----
+library(knitr)
+library(kableExtra)
+
+# Wide table: rows = model, cols = k=1..5
+tbl <- empirical %>%
+  mutate(model = as.character(model)) %>%
+  mutate(model = stringr::str_replace_all(model, "\n", "\\\\\n")) %>%  # for LaTeX line breaks
+  mutate(k = paste0("k=", k)) %>%
+  tidyr::pivot_wider(names_from = k, values_from = value) %>%
+  arrange(model)
+
+# Format as percentages (2 dp)
+fmt <- function(x) sprintf("%.2f\\%%", x * 100)
+tbl_fmt <- tbl %>%
+  mutate(across(starts_with("k="), fmt))
+
+# Ensure folder exists
+if (!dir.exists("tables")) dir.create("tables", recursive = TRUE)
+
+latex_tbl <- kable(
+  tbl_fmt,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Empirical pass@k (\\%) by model.",
+  label = "tab:empirical-passk",
+  align = c("l", rep("c", ncol(tbl_fmt) - 1)),
+  escape = FALSE
+) %>%
+  kable_styling(latex_options = c("hold_position"))
+
+save_kable(latex_tbl, "tables/overall/empirical_pass_at_k.tex")
+```
+
+# Pass@k: Unbiased
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh"
+  )
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"        = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names))
+
+# reshape pass@k columns into long format
+
+unbiased <- df_filtered %>%
+  select(model, starts_with("unbiased_pass_at_")) %>%
+  pivot_longer(
+    cols = starts_with("unbiased_pass_at_"),
+    names_to = "k",
+    values_to = "value"
+  ) %>%
+  mutate(
+    k = as.integer(str_extract(k, "\\d+"))
+  )
+
+# plot
+p <- ggplot(unbiased, aes(x = k, y = value, color = model)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  labs (
+    title = "Unbiased Pass@k",
+    subtitle = "Default model settings",
+    x = "k",
+    y = "Pass@k",
+    color = "Model"
+  ) +
+  theme_bw()
+p
+
+# Export to pdf
+ggsave("graphs/overall/unbiased_pass_at_k.pdf", plot = p, width = 6, height = 4, device = "pdf")
+
+# ---- Table (LaTeX) ----
+library(knitr)
+library(kableExtra)
+
+# Wide table: rows = model, cols = k=1..5
+tbl <- unbiased %>%
+  mutate(model = as.character(model)) %>%
+  mutate(model = stringr::str_replace_all(model, "\n", "\\\\\n")) %>%  # for LaTeX line breaks
+  mutate(k = paste0("k=", k)) %>%
+  tidyr::pivot_wider(names_from = k, values_from = value) %>%
+  arrange(model)
+
+# Format as percentages (2 dp)
+fmt <- function(x) sprintf("%.2f\\%%", x * 100)
+tbl_fmt <- tbl %>%
+  mutate(across(starts_with("k="), fmt))
+
+# Ensure folder exists
+if (!dir.exists("tables")) dir.create("tables", recursive = TRUE)
+
+latex_tbl <- kable(
+  tbl_fmt,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Unbiased pass@k (\\%) by model.",
+  label = "tab:unbiased-passk",
+  align = c("l", rep("c", ncol(tbl_fmt) - 1)),
+  escape = FALSE
+) %>%
+  kable_styling(latex_options = c("hold_position"))
+
+save_kable(latex_tbl, "tables/overall/unbiased_pass_at_k.tex")
+```
+
+# Average Build Success Rate
+
+```{r}
+library(ggplot2)
+library(readr)
+library(scales)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh"
+  )
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"                = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"             = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"               = "GPT-5 (High Reasoning)",
+  "o3"                                = "o3",
+  "claude-sonnet-4_thinking0"        = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"        = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"       = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"       = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"                    = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"         = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium"      = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"        = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                       = "Qwen3 Coder",
+  "kimi-k2-0905"                      = "Kimi K2 0905",
+  "gpt-4o"                            = "GPT-4o"
+)
+
+# Filter and rename
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names))
+
+p <- ggplot(df_filtered, aes(x = model, y = avg_build_success_rate, fill = model)) +
+  geom_col() +
+  geom_text(
+    aes(label = scales::percent(avg_build_success_rate, accuracy=0.1)),
+    vjust = -0.5,
+    size = 3
+  ) +
+  labs(
+    title = "Average Build Success Rate (k = 5)",
+    subtitle = "Default model settings",
+    x = "Model",
+    y = "Average Build Success Rate (%)"
+  ) +
+  scale_y_continuous(
+    labels = scales::percent,
+    limits = c(0, 1)
+    ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+
+p
+# Export to pdf
+ggsave("graphs/overall/avg_build_success_rate.pdf", plot = p, width = 6, height = 4, device = "pdf")
+
+# ---- Table (LaTeX) ----
+
+
+# Preserve order as shown in plot
+levels_order <- unique(df_filtered$model)
+
+table_df <- df_filtered %>%
+  mutate(
+    model = factor(model, levels = levels_order)  # lock order
+  ) %>%
+  arrange(model) %>%                               # sort by the raw factor
+  mutate(
+    Model = stringr::str_replace_all(as.character(model), "\n", "\\\\\n"),
+    `Average Build Success Rate (\\%)` = sprintf("%.1f\\%%", avg_build_success_rate * 100)
+  ) %>%
+  select(Model, `Average Build Success Rate (\\%)`)  # no second arrange()
+
+if (!dir.exists("tables")) dir.create("tables", recursive = TRUE)
+
+latex_tbl <- kable(
+  table_df,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Average build success rate (\\%) across $k=5$ generations.",
+  label = "tab:avg-build-success",
+  align = c("l","c"),
+  escape = FALSE
+) %>%
+  kable_styling(latex_options = c("hold_position"))
+
+save_kable(latex_tbl, "tables/overall/avg_build_success_rate.tex")
+```
+
+# Funnel Stacked Bar
+
+```{r}
+library(ggplot2)
+library(readr)
+library(dplyr)
+library(tidyr)
+library(scales)
+library(stringr)
+
+df <- read.csv("../analysis_results/all_models_summary.csv")
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh"
+)
+
+# Rename mapping
+model_names <- c(
+  "gpt-5_reasoninglow"           = "GPT-5 (Low Reasoning)",
+  "gpt-5_reasoningmedium"        = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"          = "GPT-5 (High Reasoning)",
+  "o3"                           = "o3",
+  "claude-sonnet-4_thinking0"    = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "claude-sonnet-4_thinking8k"   = "Claude Sonnet 4\n(8k Thinking Tokens)",
+  "claude-sonnet-4_thinking16k"  = "Claude Sonnet 4\n(16k Thinking Tokens)",
+  "claude-sonnet-4_thinking24k"  = "Claude Sonnet 4\n(24k Thinking Tokens)",
+  "gemini-2.5-pro"               = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoninglow"    = "gpt-oss-120b (Low Reasoning)",
+  "gpt-oss-120b_reasoningmedium" = "gpt-oss-120b (Medium Reasoning)",
+  "gpt-oss-120b_reasoninghigh"   = "gpt-oss-120b (High Reasoning)",
+  "qwen3-coder"                  = "Qwen3 Coder",
+  "kimi-k2-0905"                 = "Kimi K2 0905",
+  "gpt-4o"                       = "GPT-4o"
+)
+
+# Filter and rename; let factors follow alphabetical order
+df_filtered <- df %>%
+  filter(!(model %in% exclude_models)) %>%
+  mutate(model = recode(model, !!!model_names)) %>%
+  arrange(model)   # alphabetical by pretty name
+
+# Per-generation funnel: GREEN bottom, ORANGE middle, RED top
+df_funnel <- df_filtered %>%
+  transmute(
+    model,
+    failed_build       = 1 - avg_build_success_rate,
+    built_failed_test  = avg_build_success_rate - avg_test_success_rate,
+    built_passed_test  = avg_test_success_rate
+  ) %>%
+  pivot_longer(
+    cols = c(failed_build, built_failed_test, built_passed_test),
+    names_to = "stage",
+    values_to = "rate"
+  ) %>%
+  mutate(
+    stage = factor(stage,
+                   levels = c("built_passed_test", "built_failed_test", "failed_build"))
+  )
+
+stage_labels <- c(
+  "failed_build"      = "Failed to compile",
+  "built_failed_test" = "Compiled; tests failed",
+  "built_passed_test" = "Compiled; tests passed"
+)
+
+p <- ggplot(df_funnel, aes(x = model, y = rate, fill = stage)) +
+  geom_col() +
+  geom_text(
+    aes(label = percent(rate, accuracy = 0.01)),
+    position = position_stack(vjust = 0.5),
+    color = "black", size = 3.5
+  ) +
+  labs(
+    title = "Compilation vs Test Outcomes",
+    subtitle = "Share of generations (k = 5 per task)",
+    x = "Model",
+    y = "Percentage of Generations",
+    fill = "Outcome"
+  ) +
+  scale_y_continuous(labels = percent, limits = c(0, 1)) +
+  scale_fill_manual(
+    values = c(
+      "built_passed_test"  = "#27ae60",
+      "built_failed_test"  = "#f39c12",
+      "failed_build"       = "#e74c3c"
+    ),
+    labels = stage_labels
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+p
+
+# Export to pdf
+if (!dir.exists("graphs")) dir.create("graphs", recursive = TRUE)
+ggsave("graphs/overall/compilation_vs_success.pdf", plot = p, width = 7, height = 5, device = "pdf")
+
+# ---- Table (LaTeX): Compilation vs Test Outcomes ----
+library(knitr)
+library(kableExtra)
+
+# Ensure output dir
+if (!dir.exists("tables")) dir.create("tables", recursive = TRUE)
+
+# Wide table with columns in green → orange → red order
+table_df <- df_funnel %>%
+  mutate(
+    Model = stringr::str_replace_all(as.character(model), "\n", "\\\\\n"),
+    stage = factor(stage, levels = c("built_passed_test","built_failed_test","failed_build"))
+  ) %>%
+  select(Model, stage, rate) %>%
+  tidyr::pivot_wider(names_from = stage, values_from = rate) %>%
+  mutate(
+    `Compiled; tests passed` = sprintf("%.1f\\%%", `built_passed_test` * 100),
+    `Compiled; tests failed` = sprintf("%.1f\\%%", `built_failed_test` * 100),
+    `Failed to compile`      = sprintf("%.1f\\%%", `failed_build` * 100)
+  ) %>%
+  select(Model, `Compiled; tests passed`, `Compiled; tests failed`, `Failed to compile`)
+
+latex_tbl <- kable(
+  table_df,
+  format = "latex",
+  booktabs = TRUE,
+  caption = "Compilation vs. test outcomes per model (share of generations; green \\textrightarrow{} orange \\textrightarrow{} red).",
+  label = "tab:compilation-vs-success",
+  align = c("l","c","c","c"),
+  escape = FALSE
+) %>%
+  kable_styling(latex_options = c("hold_position"))
+
+save_kable(latex_tbl, "tables/overall/compilation_vs_success.tex")
+
+```
+
+#  Stacked bar by problem
+
+
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(readr)
+library(tidyr)
+library(stringr)
+library(purrr)
+
+set.seed(42)
+
+# --- Inputs ---
+summary_path <- "../analysis_results/all_models_summary.csv"
+problems_dir <- "../analysis_results"  # where {model}_problems.csv live
+B <- 5000                              # bootstrap replicates
+
+exclude_models <- c(
+  "claude-sonnet-4_thinking8k",
+  "claude-sonnet-4_thinking16k",
+  "claude-sonnet-4_thinking24k",
+  "gpt-5_reasoninglow",
+  "gpt-5_reasoninghigh",
+  "gpt-oss-120b_reasoninglow",
+  "gpt-oss-120b_reasoninghigh"
+)
+
+pretty_names <- c(
+  "gpt-5_reasoningmedium"        = "GPT-5 (Medium Reasoning)",
+  "gpt-5_reasoninghigh"          = "GPT-5 (High Reasoning)",
+  "o3"                           = "o3",
+  "claude-sonnet-4_thinking0"    = "Claude Sonnet 4\n(0k Thinking Tokens)",
+  "gemini-2.5-pro"               = "Gemini 2.5 Pro",
+  "gpt-oss-120b_reasoningmedium" = "gpt-oss-120b (Medium Reasoning)",
+  "qwen3-coder"                  = "Qwen3 Coder",
+  "kimi-k2-0905"                 = "Kimi K2 0905",
+  "gpt-4o"                       = "GPT-4o"
+)
+
+# --- Load model list from summary to know which per-problem files to read ---
+df_sum <- read.csv(summary_path) %>%
+  filter(!(model %in% exclude_models))
+
+models <- df_sum$model
+
+# Helper: load per-problem rates and return a data frame with 3-part composition per problem
+load_problem_composition <- function(model_id) {
+  path <- file.path(problems_dir, paste0(model_id, "_problems.csv"))
+  dfp <- read.csv(path)
+
+  # Per-problem rates (all are per-attempt rates within that problem)
+  gen  <- dfp$generation_success_rate
+  bld  <- dfp$build_success_rate
+  tst  <- dfp$test_success_rate
+
+  failed_generation      <- pmax(1 - gen, 0)
+  generated_failed_build <- pmax(gen - bld, 0)
+  built_failed_test      <- pmax(bld - tst, 0)
+  built_passed_test      <- pmax(tst, 0)
+
+  # Collapse to 3-part: compile fail includes gen-fail + build-fail
+  compile_fail <- failed_generation + generated_failed_build
+
+  # Return long per-problem composition
+  tibble(
+    problem_id = dfp$problem_id,
+    compile_fail = compile_fail,
+    test_fail    = built_failed_test,
+    pass         = built_passed_test
+  )
+}
+
+# Bootstrap CIs over problems (cluster-robust)
+bootstrap_model <- function(model_id, B = 5000) {
+  comp_df <- load_problem_composition(model_id)
+  n <- nrow(comp_df)
+  mat <- as.matrix(comp_df[, c("compile_fail", "test_fail", "pass")])
+
+  # bootstrap means
+  boot_means <- array(NA_real_, dim = c(B, 3))
+  for (b in 1:B) {
+    idx <- sample.int(n, n, replace = TRUE)
+    boot_means[b, ] <- colMeans(mat[idx, , drop = FALSE])
+  }
+
+  # point estimates (macro mean across problems)
+  point <- colMeans(mat)
+
+  # 95% percentile CIs
+  lower <- apply(boot_means, 2, quantile, probs = 0.025, names = FALSE)
+  upper <- apply(boot_means, 2, quantile, probs = 0.975, names = FALSE)
+
+  tibble(
+    model_id = model_id,
+    outcome  = c("Compile failed", "Compiled; tests failed", "Compiled; tests passed"),
+    mean     = point,
+    lower    = lower,
+    upper    = upper,
+    problems = n
+  )
+}
+
+# Run bootstrap for all models we’re keeping
+results <- map_dfr(models, ~bootstrap_model(.x, B = B)) %>%
+  # attach pretty names for plotting
+  mutate(model = recode(model_id, !!!pretty_names)) %>%
+  # if any model isn't in pretty_names, keep its raw id as fallback
+  mutate(model = ifelse(is.na(model), model_id, model))
+
+# Order models by pass rate descending for nicer plots
+order_models <- results %>%
+  filter(outcome == "Compiled; tests passed") %>%
+  arrange(desc(mean)) %>%
+  pull(model)
+
+results <- results %>%
+  mutate(model = factor(model, levels = order_models),
+         outcome = factor(outcome,
+                          levels = c("Compiled; tests passed",
+                                     "Compiled; tests failed",
+                                     "Compile failed")))
+
+# ---- Table you can quote in text (percent with 95% CI) ----
+table_print <- results %>%
+  mutate(
+    pct  = scales::percent(mean, accuracy = 0.1),
+    lo   = scales::percent(lower, accuracy = 0.1),
+    hi   = scales::percent(upper, accuracy = 0.1),
+    ci   = paste0(pct, " (95% CI: ", lo, "–", hi, ")")
+  ) %>%
+  select(model, outcome, ci, problems) %>%
+  arrange(model, outcome)
+
+print(table_print, n = nrow(table_print))
+# You can knitr::kable(table_print) if building a PDF/LaTeX doc
+
+# ---- Plot: dodged bars with 95% CI error bars ----
+p_ci <- ggplot(results, aes(x = model, y = mean, fill = outcome)) +
+  geom_col(position = position_dodge(width = 0.8), width = 0.75) +
+  geom_errorbar(aes(ymin = lower, ymax = upper),
+                position = position_dodge(width = 0.8),
+                width = 0.2, linewidth = 0.4) +
+  scale_y_continuous(labels = scales::percent, limits = c(0, 1)) +
+  scale_fill_manual(
+    values = c(
+      "Compiled; tests passed" = "#27ae60",
+      "Compiled; tests failed" = "#f39c12",
+      "Compile failed"         = "#e74c3c"
+    )
+  ) +
+  labs(
+    title = "Where Models Fail (with 95% CIs, cluster-bootstrapped over problems)",
+    subtitle = "Shares over generation attempts, aggregated per problem then bootstrapped by problem",
+    x = NULL, y = "Share of attempts", fill = "Outcome"
+  ) +
+  coord_flip() +
+  theme_bw() +
+  theme(legend.position = "right")
+
+p_ci
+
+if (!dir.exists("graphs/overall")) dir.create("graphs/overall", recursive = TRUE)
+ggsave("graphs/overall/compilation_vs_tests_with_CIs.pdf", p_ci, width = 8.0, height = 5.0, device = "pdf")
+```

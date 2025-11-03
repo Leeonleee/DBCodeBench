@@ -1,0 +1,62 @@
+diff --git a/src/core_functions/aggregate/distributive/skew.cpp b/src/core_functions/aggregate/distributive/skew.cpp
+index 0dcb87db9b0c..ef42dce44d08 100644
+--- a/src/core_functions/aggregate/distributive/skew.cpp
++++ b/src/core_functions/aggregate/distributive/skew.cpp
+@@ -62,7 +62,7 @@ struct SkewnessOperation {
+ 		}
+ 		double div = std::sqrt(p);
+ 		if (div == 0) {
+-			target = NAN;
++			finalize_data.ReturnNull();
+ 			return;
+ 		}
+ 		double temp1 = std::sqrt(n * (n - 1)) / (n - 2);
+diff --git a/src/core_functions/aggregate/regression/regr_intercept.cpp b/src/core_functions/aggregate/regression/regr_intercept.cpp
+index 7f741d22c8e7..a3a117456ad3 100644
+--- a/src/core_functions/aggregate/regression/regr_intercept.cpp
++++ b/src/core_functions/aggregate/regression/regr_intercept.cpp
+@@ -45,10 +45,6 @@ struct RegrInterceptOperation {
+ 			return;
+ 		}
+ 		RegrSlopeOperation::Finalize<T, RegrSlopeState>(state.slope, target, finalize_data);
+-		if (Value::IsNan(target)) {
+-			finalize_data.ReturnNull();
+-			return;
+-		}
+ 		auto x_avg = state.sum_x / state.count;
+ 		auto y_avg = state.sum_y / state.count;
+ 		target = y_avg - target * x_avg;
+diff --git a/src/include/duckdb/core_functions/aggregate/algebraic/corr.hpp b/src/include/duckdb/core_functions/aggregate/algebraic/corr.hpp
+index 63cd80fabf2e..0d595b11aa7a 100644
+--- a/src/include/duckdb/core_functions/aggregate/algebraic/corr.hpp
++++ b/src/include/duckdb/core_functions/aggregate/algebraic/corr.hpp
+@@ -58,7 +58,11 @@ struct CorrOperation {
+ 			if (!Value::DoubleIsFinite(std_y)) {
+ 				throw OutOfRangeException("STDDEV_POP for Y is out of range!");
+ 			}
+-			target = std_x * std_y != 0 ? cov / (std_x * std_y) : NAN;
++			if (std_x * std_y == 0) {
++				finalize_data.ReturnNull();
++				return;
++			}
++			target = cov / (std_x * std_y);
+ 		}
+ 	}
+ 
+diff --git a/src/include/duckdb/core_functions/aggregate/regression/regr_slope.hpp b/src/include/duckdb/core_functions/aggregate/regression/regr_slope.hpp
+index be397d417605..7010504190a6 100644
+--- a/src/include/duckdb/core_functions/aggregate/regression/regr_slope.hpp
++++ b/src/include/duckdb/core_functions/aggregate/regression/regr_slope.hpp
+@@ -46,7 +46,11 @@ struct RegrSlopeOperation {
+ 			if (!Value::DoubleIsFinite(var_pop)) {
+ 				throw OutOfRangeException("VARPOP is out of range!");
+ 			}
+-			target = var_pop != 0 ? cov / var_pop : NAN;
++			if (var_pop == 0) {
++				finalize_data.ReturnNull();
++				return;
++			}
++			target = cov / var_pop;
+ 		}
+ 	}
+ 

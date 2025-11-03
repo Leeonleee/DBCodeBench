@@ -1,0 +1,131 @@
+diff --git a/src/function/table/system/duckdb_indexes.cpp b/src/function/table/system/duckdb_indexes.cpp
+index 80938f605c14..b7ffe7fef121 100644
+--- a/src/function/table/system/duckdb_indexes.cpp
++++ b/src/function/table/system/duckdb_indexes.cpp
+@@ -55,7 +55,7 @@ static unique_ptr<FunctionData> DuckDBIndexesBind(ClientContext &context, TableF
+ 	return_types.emplace_back(LogicalType::BOOLEAN);
+ 
+ 	names.emplace_back("expressions");
+-	return_types.emplace_back(LogicalType::VARCHAR);
++	return_types.emplace_back(LogicalType::LIST(LogicalType::VARCHAR));
+ 
+ 	names.emplace_back("sql");
+ 	return_types.emplace_back(LogicalType::VARCHAR);
+@@ -75,6 +75,20 @@ unique_ptr<GlobalTableFunctionState> DuckDBIndexesInit(ClientContext &context, T
+ 	return std::move(result);
+ }
+ 
++Value GetIndexExpressions(IndexCatalogEntry &index) {
++	auto create_info = index.GetInfo();
++	auto &create_index_info = create_info->Cast<CreateIndexInfo>();
++
++	auto vec = create_index_info.ExpressionsToList();
++
++	vector<Value> content;
++	content.reserve(vec.size());
++	for (auto &item : vec) {
++		content.push_back(Value(item));
++	}
++	return Value::LIST(LogicalType::VARCHAR, std::move(content));
++}
++
+ void DuckDBIndexesFunction(ClientContext &context, TableFunctionInput &data_p, DataChunk &output) {
+ 	auto &data = data_p.global_state->Cast<DuckDBIndexesData>();
+ 	if (data.offset >= data.entries.size()) {
+@@ -119,7 +133,7 @@ void DuckDBIndexesFunction(ClientContext &context, TableFunctionInput &data_p, D
+ 		// is_primary, BOOLEAN
+ 		output.SetValue(col++, count, Value::BOOLEAN(index.IsPrimary()));
+ 		// expressions, VARCHAR
+-		output.SetValue(col++, count, Value());
++		output.SetValue(col++, count, GetIndexExpressions(index));
+ 		// sql, VARCHAR
+ 		auto sql = index.ToSQL();
+ 		output.SetValue(col++, count, sql.empty() ? Value() : Value(std::move(sql)));
+diff --git a/src/include/duckdb/parser/parsed_data/create_index_info.hpp b/src/include/duckdb/parser/parsed_data/create_index_info.hpp
+index 4b42e8e0c6c3..08ff3826f11a 100644
+--- a/src/include/duckdb/parser/parsed_data/create_index_info.hpp
++++ b/src/include/duckdb/parser/parsed_data/create_index_info.hpp
+@@ -48,6 +48,8 @@ struct CreateIndexInfo : public CreateInfo {
+ 	DUCKDB_API unique_ptr<CreateInfo> Copy() const override;
+ 
+ 	string ToString() const override;
++	vector<string> ExpressionsToList() const;
++	string ExpressionsToString() const;
+ 	void Serialize(Serializer &serializer) const override;
+ 	static unique_ptr<CreateInfo> Deserialize(Deserializer &deserializer);
+ };
+diff --git a/src/parser/parsed_data/create_index_info.cpp b/src/parser/parsed_data/create_index_info.cpp
+index 4f2ff610cd34..8f74c05c7086 100644
+--- a/src/parser/parsed_data/create_index_info.cpp
++++ b/src/parser/parsed_data/create_index_info.cpp
+@@ -27,6 +27,38 @@ static void RemoveTableQualificationRecursive(unique_ptr<ParsedExpression> &expr
+ 	}
+ }
+ 
++vector<string> CreateIndexInfo::ExpressionsToList() const {
++	vector<string> list;
++
++	for (idx_t i = 0; i < parsed_expressions.size(); i++) {
++		auto &expr = parsed_expressions[i];
++		auto copy = expr->Copy();
++		// column ref expressions are qualified with the table name
++		// we need to remove them to reproduce the original query
++		RemoveTableQualificationRecursive(copy, table);
++		bool add_parenthesis = true;
++		if (copy->type == ExpressionType::COLUMN_REF) {
++			auto &column_ref = copy->Cast<ColumnRefExpression>();
++			if (!column_ref.IsQualified()) {
++				// Only when column references are not qualified, i.e (col1, col2)
++				// then these expressions do not need to be wrapped in parenthesis
++				add_parenthesis = false;
++			}
++		}
++		if (add_parenthesis) {
++			list.push_back(StringUtil::Format("(%s)", copy->ToString()));
++		} else {
++			list.push_back(StringUtil::Format("%s", copy->ToString()));
++		}
++	}
++	return list;
++}
++
++string CreateIndexInfo::ExpressionsToString() const {
++	auto list = ExpressionsToList();
++	return StringUtil::Join(list, ", ");
++}
++
+ string CreateIndexInfo::ToString() const {
+ 	string result;
+ 
+@@ -48,30 +80,7 @@ string CreateIndexInfo::ToString() const {
+ 		result += " ";
+ 	}
+ 	result += "(";
+-	for (idx_t i = 0; i < parsed_expressions.size(); i++) {
+-		auto &expr = parsed_expressions[i];
+-		auto copy = expr->Copy();
+-		if (i > 0) {
+-			result += ", ";
+-		}
+-		// column ref expressions are qualified with the table name
+-		// we need to remove them to reproduce the original query
+-		RemoveTableQualificationRecursive(copy, table);
+-		bool add_parenthesis = true;
+-		if (copy->type == ExpressionType::COLUMN_REF) {
+-			auto &column_ref = copy->Cast<ColumnRefExpression>();
+-			if (!column_ref.IsQualified()) {
+-				// Only when column references are not qualified, i.e (col1, col2)
+-				// then these expressions do not need to be wrapped in parenthesis
+-				add_parenthesis = false;
+-			}
+-		}
+-		if (add_parenthesis) {
+-			result += StringUtil::Format("(%s)", copy->ToString());
+-		} else {
+-			result += StringUtil::Format("%s", copy->ToString());
+-		}
+-	}
++	result += ExpressionsToString();
+ 	result += ")";
+ 	if (!options.empty()) {
+ 		result += " WITH (";

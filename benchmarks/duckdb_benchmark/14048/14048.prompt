@@ -1,0 +1,87 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Add tests for sha1 function
+This is a followup to #13020 that adds some basic tests for the new `sha1` function, modeled after the existing tests for `sha512`.
+Catalog Errors only offer one suggestion when multiple suggestions are returned with the same score
+### What happens?
+
+Consider the case where there are multiple schemas with the same matching score for a Catalog error.
+
+```sql
+create schema a;
+create schema b;
+create table a.foo(name text);
+create table b.foo(name text);
+select * from foo;
+```
+
+```
+Catalog Error: Table with name foo does not exist!
+Did you mean "b.foo"?
+LINE 1: select * from foo;
+```
+
+There is an equally qualified match in schema `a`, but Catalog Error just presents the last match.
+
+Here is the relevant snippet of code.
+
+https://github.com/duckdb/duckdb/blob/45787e5f9f8bdb9dce97890c1ac7a7eb2dc3a49f/src/catalog/catalog.cpp#L639-L654
+
+I'd suggest that the code should be changed to present all suggestions that have the same score so that the a user that has tables in multiple schemas with the same name can make the appropriate choice.
+
+Thanks,
+
+Rusty
+
+### To Reproduce
+
+```sql
+create schema a;
+create schema b;
+create table a.foo(name text);
+create table b.foo(name text);
+select * from foo;
+```
+
+
+### OS:
+
+Mac OS X
+
+### DuckDB Version:
+
+1.0.0
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+Rusty Conover
+
+### Affiliation:
+
+self
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

@@ -1,0 +1,61 @@
+diff --git a/test/sql/alter/add_col/test_add_col_incorrect.test b/test/sql/alter/add_col/test_add_col_incorrect.test
+index bd14e14b7672..5d6bc423b889 100644
+--- a/test/sql/alter/add_col/test_add_col_incorrect.test
++++ b/test/sql/alter/add_col/test_add_col_incorrect.test
+@@ -11,3 +11,13 @@ INSERT INTO test VALUES (1, 1), (2, 2)
+ statement error
+ ALTER TABLE test ADD COLUMN i INTEGER
+ 
++statement ok
++CREATE VIEW x(x) AS (SELECT 1)
++
++# Cannot add columns to views
++statement error
++ALTER VIEW x ADD COLUMN i INTEGER
++
++# Multiple alter per statement not supported yet
++statement error
++ALTER TABLE i ADD COLUMN j INT, ADD COLUMN k INT
+diff --git a/test/sql/catalog/dependencies/test_alter_dependency_ownership.test b/test/sql/catalog/dependencies/test_alter_dependency_ownership.test
+index 66a4f1ec8b81..70afad7621f5 100644
+--- a/test/sql/catalog/dependencies/test_alter_dependency_ownership.test
++++ b/test/sql/catalog/dependencies/test_alter_dependency_ownership.test
+@@ -91,6 +91,10 @@ CREATE TABLE tablename2 (
+     colname integer
+ );
+ 
++# owned by specified more than once
++statement error
++ALTER SEQUENCE sequence1 OWNED BY tablename OWNED BY tablename2;
++
+ statement ok
+ ALTER SEQUENCE sequence1 OWNED BY tablename;
+ 
+diff --git a/test/sql/catalog/sequence/test_sequence.test b/test/sql/catalog/sequence/test_sequence.test
+index a7cfa5f61967..e447905610ed 100644
+--- a/test/sql/catalog/sequence/test_sequence.test
++++ b/test/sql/catalog/sequence/test_sequence.test
+@@ -489,3 +489,23 @@ select nextval(1 + 1);
+ 
+ statement error
+ select currval(true);
++
++# max value specified more than once
++statement error
++CREATE SEQUENCE wrongseq NO MAXVALUE MAXVALUE 2;
++
++# min value specified more than once
++statement error
++CREATE SEQUENCE wrongseq MINVALUE 10 MINVALUE 2;
++
++# start value specified more than once
++statement error
++CREATE SEQUENCE wrongseq START 13 START WITH 3;
++
++# cycle value specified more than once
++statement error
++CREATE SEQUENCE wrongseq CYCLE MAXVALUE 2 MINVALUE 1 NO CYCLE;
++
++# increment value specified more than once
++statement error
++CREATE SEQUENCE wrongseq INCREMENT 2 INCREMENT BY -1;

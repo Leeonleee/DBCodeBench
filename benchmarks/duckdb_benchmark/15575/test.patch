@@ -1,0 +1,11 @@
+diff --git a/test/fuzzer/public/lateral_join_subquery.test b/test/fuzzer/public/lateral_join_subquery.test
+index 30a2ce2f3acc..0c47325298d8 100644
+--- a/test/fuzzer/public/lateral_join_subquery.test
++++ b/test/fuzzer/public/lateral_join_subquery.test
+@@ -12,3 +12,6 @@ statement error
+ FROM t1 INNER JOIN (SELECT t1.c1) ON (SELECT 42);
+ ----
+ Subqueries are not supported in LATERAL join conditions
++
++statement ok
++SELECT  c01 from values('string') as _(c01), LATERAL ( WITH ta02 AS MATERIALIZED ( SELECT 'string' ) ( SELECT 'string' ) INTERSECT ALL ( SELECT 'string' ) );

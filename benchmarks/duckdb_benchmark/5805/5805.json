@@ -1,0 +1,20 @@
+{
+  "repo": "duckdb/duckdb",
+  "pull_number": 5805,
+  "instance_id": "duckdb__duckdb-5805",
+  "issue_numbers": [
+    "4121"
+  ],
+  "base_commit": "e74e2471a57fc30c71382cbf34a26910189bae8a",
+  "patch": "diff --git a/src/common/types/vector.cpp b/src/common/types/vector.cpp\nindex ff88d59b6db9..7ab577a7d40f 100644\n--- a/src/common/types/vector.cpp\n+++ b/src/common/types/vector.cpp\n@@ -1674,6 +1674,9 @@ vector<idx_t> ListVector::Search(Vector &list, const Value &key, idx_t row) {\n \tcase PhysicalType::DOUBLE:\n \t\tTemplatedSearchInMap<double>(list, key, offsets, key.IsNull(), entry.offset, entry.length);\n \t\tbreak;\n+\tcase PhysicalType::INTERVAL:\n+\t\tTemplatedSearchInMap<interval_t>(list, key, offsets, key.IsNull(), entry.offset, entry.length);\n+\t\tbreak;\n \tcase PhysicalType::VARCHAR:\n \t\tSearchStringInMap(list, StringValue::Get(key), offsets, key.IsNull(), entry.offset, entry.length);\n \t\tbreak;\n",
+  "test_patch": "diff --git a/test/sql/types/nested/map/map_from_entries/data_types.test b/test/sql/types/nested/map/map_from_entries/data_types.test\nindex db17e57611c3..936812b7b9b8 100644\n--- a/test/sql/types/nested/map/map_from_entries/data_types.test\n+++ b/test/sql/types/nested/map/map_from_entries/data_types.test\n@@ -245,15 +245,10 @@ select * from interval_key;\n ----\n {1 day 01:00:00=x, 366 days 01:00:00=y}\n \n-# Issue #4121 needs to be fixed first\n-# Once this test fails, remove it and uncomment the one below\n-statement error\n+query I\n select col[('2022-01-02 01:00:00'::TIMESTAMP - '2022-01-01'::TIMESTAMP)] from interval_key;\n-\n-#query I\n-#select col[('2022-01-02 01:00:00'::TIMESTAMP - '2022-01-01'::TIMESTAMP)] from interval_key;\n-#----\n-#[x]\n+----\n+[x]\n \n # Invalid\n statement error\n",
+  "problem_statement": "INTERVAL type missing in ListVector::Search\n#### What happens?\r\nAttempting to do a look up in a MAP using an INTERVAL value causes an exception to be thrown.\r\n(within ListVector::Search there is no case to handle PhysicalType::INTERVAL)\r\n\r\n#### To Reproduce\r\n```sql\r\nstatement ok\r\ncreate table interval_key as select MAP_FROM_ENTRIES(ARRAY[(('2022-01-02 01:00:00'::TIMESTAMP - '2022-01-01'::TIMESTAMP), 'x'), (('2022-01-02 01:00:00'::TIMESTAMP - '2021-01-01'::TIMESTAMP), 'y')]) col;\r\n\r\nquery I\r\nselect * from interval_key;\r\n----\r\n{1 day 01:00:00=x, 366 days 01:00:00=y}\r\n\r\nquery I\r\nselect col[('2022-01-02 01:00:00'::TIMESTAMP - '2022-01-01'::TIMESTAMP)] from interval_key;\r\n----\r\n[x]\r\n```\r\n\r\nThe last query causes the error:\r\n```\r\nActual result:\r\nInvalid type Error: Invalid Type [LIST]: Invalid type for List Vector Search\r\n```\n",
+  "hints_text": "Thanks for the report!\r\n\r\nI think it would make sense to rework the interval type to remove the interval physical type entirely, and instead store it as `STRUCT(months INTEGER, days INTEGER, micros BIGINT)`. This should clean up the code and would allow us to eat our own dog food w.r.t. adding type aliases with function overloading, etc. @hawkfish thoughts?\n> Thanks for the report!\r\n> \r\n> I think it would make sense to rework the interval type to remove the interval physical type entirely, and instead store it as `STRUCT(months INTEGER, days INTEGER, micros BIGINT)`. This should clean up the code and would allow us to eat our own dog food w.r.t. adding type aliases with function overloading, etc. @hawkfish thoughts?\r\n\r\nI think this is a good long term goal - and is similar to the idea I have been flogging for a `TIMESTAMP` that contains a time zone: `STRUCT(ts TIMESTAMP, tz VARCHAR)`.  My one concern here is that the standard's rules for `INTERVAL` are fairly complex so if we want to experiment with complex types like this, we should start with this locale-aware timestamp to flesh out the major issues?\n`INTERVAL` now has an `operator==` method so we can just add a case.",
+  "created_at": "2022-12-30T16:37:43Z",
+  "modified_files": [
+    "src/common/types/vector.cpp"
+  ],
+  "modified_test_files": [
+    "test/sql/types/nested/map/map_from_entries/data_types.test"
+  ]
+}

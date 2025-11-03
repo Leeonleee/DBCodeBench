@@ -1,0 +1,124 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+wrong results with extract(second from <interval>)
+#### What happens?
+When extracting the seconds component from an interval it returns the entire value in seconds. This is what `extract(epoch from <interval>)` should return.
+
+#### To Reproduce
+```
+D select extract( second from interval '2 hours 2 minutes 10 seconds' ) as value_should_be_10;
+┌────────────────────┐
+│ value_should_be_10 │
+├────────────────────┤
+│ 7330               │
+└────────────────────┘
+
+D select extract( epoch from interval '2 hours 2 minutes 10 seconds' ) as value_should_be_7330;
+┌──────────────────────┐
+│ value_should_be_7330 │
+├──────────────────────┤
+│ 7330                 │
+└──────────────────────┘
+```
+#### Environment (please complete the following information):
+ - OS: macOS 11.5.2
+ - DuckDB Version: 0.3.0
+ - DuckDB Client: duckdb-cli
+
+#### Before Submitting
+
+- [ ] **Have you tried this on the latest `master` branch?**
+
+No, but it's also incorrect in the test file here as well
+https://github.com/duckdb/duckdb/blob/master/test/sql/function/interval/test_extract.test#L126
+
+PostgreSQL 13.2
+```
+greg.rahn=# SELECT i, EXTRACT(second FROM i) FROM intervals;
+       i       | date_part
+---------------+-----------
+ 2 years       |         0
+ 1 year 4 mons |         0
+ 42 days       |         0
+ 00:34:26.3434 |   26.3434
+ [NULL]        |    [NULL]
+```
+
+DuckDB
+```
+D SELECT i, EXTRACT(second FROM i) FROM intervals;
+┌─────────────────┬──────────────────────┐
+│        i        │ date_part(second, i) │
+├─────────────────┼──────────────────────┤
+│ 2 years         │ 0                    │
+│ 1 year 4 months │ 0                    │
+│ 42 days         │ 0                    │
+│ 00:34:26.3434   │ 2066                 │ <<< should be 20.3434
+│                 │                      │
+└─────────────────┴──────────────────────┘
+```
+
+
+wrong results with extract(second from <interval>)
+#### What happens?
+When extracting the seconds component from an interval it returns the entire value in seconds. This is what `extract(epoch from <interval>)` should return.
+
+#### To Reproduce
+```
+D select extract( second from interval '2 hours 2 minutes 10 seconds' ) as value_should_be_10;
+┌────────────────────┐
+│ value_should_be_10 │
+├────────────────────┤
+│ 7330               │
+└────────────────────┘
+
+D select extract( epoch from interval '2 hours 2 minutes 10 seconds' ) as value_should_be_7330;
+┌──────────────────────┐
+│ value_should_be_7330 │
+├──────────────────────┤
+│ 7330                 │
+└──────────────────────┘
+```
+#### Environment (please complete the following information):
+ - OS: macOS 11.5.2
+ - DuckDB Version: 0.3.0
+ - DuckDB Client: duckdb-cli
+
+#### Before Submitting
+
+- [ ] **Have you tried this on the latest `master` branch?**
+
+No, but it's also incorrect in the test file here as well
+https://github.com/duckdb/duckdb/blob/master/test/sql/function/interval/test_extract.test#L126
+
+PostgreSQL 13.2
+```
+greg.rahn=# SELECT i, EXTRACT(second FROM i) FROM intervals;
+       i       | date_part
+---------------+-----------
+ 2 years       |         0
+ 1 year 4 mons |         0
+ 42 days       |         0
+ 00:34:26.3434 |   26.3434
+ [NULL]        |    [NULL]
+```
+
+DuckDB
+```
+D SELECT i, EXTRACT(second FROM i) FROM intervals;
+┌─────────────────┬──────────────────────┐
+│        i        │ date_part(second, i) │
+├─────────────────┼──────────────────────┤
+│ 2 years         │ 0                    │
+│ 1 year 4 months │ 0                    │
+│ 42 days         │ 0                    │
+│ 00:34:26.3434   │ 2066                 │ <<< should be 20.3434
+│                 │                      │
+└─────────────────┴──────────────────────┘
+```
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

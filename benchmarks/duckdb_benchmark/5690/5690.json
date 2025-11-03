@@ -1,0 +1,20 @@
+{
+  "repo": "duckdb/duckdb",
+  "pull_number": 5690,
+  "instance_id": "duckdb__duckdb-5690",
+  "issue_numbers": [
+    "5609"
+  ],
+  "base_commit": "48030413a9c3f16600040faf873ea2c9b4b7443e",
+  "patch": "diff --git a/src/parser/transform/helpers/transform_cte.cpp b/src/parser/transform/helpers/transform_cte.cpp\nindex 846d7c874d7c..ccf09bd2bf65 100644\n--- a/src/parser/transform/helpers/transform_cte.cpp\n+++ b/src/parser/transform/helpers/transform_cte.cpp\n@@ -44,7 +44,8 @@ void Transformer::TransformCTE(duckdb_libpgquery::PGWithClause *de_with_clause,\n \t\tif (cte->cterecursive || de_with_clause->recursive) {\n \t\t\tinfo->query = TransformRecursiveCTE(cte, *info);\n \t\t} else {\n-\t\t\tinfo->query = TransformSelect(cte->ctequery);\n+\t\t\tTransformer cte_transformer(this);\n+\t\t\tinfo->query = cte_transformer.TransformSelect(cte->ctequery);\n \t\t}\n \t\tD_ASSERT(info->query);\n \t\tauto cte_name = string(cte->ctename);\n",
+  "test_patch": "diff --git a/test/sql/window/test_window_binding_ctes.test b/test/sql/window/test_window_binding_ctes.test\nindex b7fefc55d3c1..65bc32a59b66 100644\n--- a/test/sql/window/test_window_binding_ctes.test\n+++ b/test/sql/window/test_window_binding_ctes.test\n@@ -62,3 +62,21 @@ WITH subquery AS (SELECT i, lag(i) OVER named_window FROM ( VALUES (1), (2), (3)\n statement error\n select i, lag(i) over named_window from (values (1), (2), (3)) as t (i) window named_window as (order by i), named_window as (order by j);\n \n+# window specs are locally scoped.\n+statement ok\n+CREATE TABLE a (id INT);\n+\n+statement ok\n+WITH\n+  cte_a AS (\n+    SELECT *\n+    FROM a\n+    WINDOW my_window AS ()\n+  ),\n+  cte_b AS (\n+    SELECT *\n+    FROM a\n+    WINDOW my_window AS ()\n+  )\n+SELECT *\n+FROM cte_a CROSS JOIN cte_b;\n",
+  "problem_statement": "Named windows should respect scope\n### What happens?\r\n\r\nInitially raised in https://github.com/duckdb/duckdb/discussions/5607.\r\n\r\nNamed windows are accessible globally, not just in the CTE that they're used in, and as such window names must also be globally unique. I expected that they would be local to usage (CTE or subquery).\r\n\r\n### To Reproduce\r\n\r\nThis example shows the requirement for global uniqueness, failing because `my_window` was declared twice.\r\n\r\n```sql\r\nCREATE TABLE a (id INT);\r\n\r\nWITH\r\n  cte_a AS (\r\n    SELECT *\r\n    FROM a\r\n    WINDOW my_window AS ()\r\n  ),\r\n  cte_b AS (\r\n    SELECT *\r\n    FROM a\r\n    WINDOW my_window AS ()\r\n  )\r\n\r\nSELECT *\r\nFROM cte_a CROSS JOIN cte_b;\r\n```\r\n\r\nThis example shows global availability, using a named window from one CTE in another.\r\n\r\n```sql\r\nCREATE TABLE a (id INT);\r\n\r\nWITH\r\n  cte_a AS (\r\n    SELECT *\r\n    FROM a\r\n    WINDOW my_window AS ()\r\n  ),\r\n  cte_b AS (\r\n    SELECT *, COUNT(*) OVER my_window AS n_rows,\r\n    FROM a\r\n  )\r\n\r\nSELECT *\r\nFROM cte_a CROSS JOIN cte_b;\r\n```\r\n\r\n### OS:\r\n\r\nUbuntu 22.04.1 LTS\r\n\r\n### DuckDB Version:\r\n\r\nv0.6.0 2213f9c946\r\n\r\n### DuckDB Client:\r\n\r\nDuckDB CLI\r\n\r\n### Full Name:\r\n\r\nLiam O'Boyle\r\n\r\n### Affiliation:\r\n\r\nNot using DuckDB in a work context (at the moment), but I am employed by https://github.com/raywhite.\r\n\r\n### Have you tried this on the latest `master` branch?\r\n\r\n- [X] I agree\r\n\r\n### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?\r\n\r\n- [X] I agree\n",
+  "hints_text": "Local is what PG does.",
+  "created_at": "2022-12-13T21:19:01Z",
+  "modified_files": [
+    "src/parser/transform/helpers/transform_cte.cpp"
+  ],
+  "modified_test_files": [
+    "test/sql/window/test_window_binding_ctes.test"
+  ]
+}

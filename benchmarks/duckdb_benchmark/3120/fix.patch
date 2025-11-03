@@ -1,0 +1,68 @@
+diff --git a/src/catalog/default/default_functions.cpp b/src/catalog/default/default_functions.cpp
+index 5d6418aab1ac..d52edfce8018 100644
+--- a/src/catalog/default/default_functions.cpp
++++ b/src/catalog/default/default_functions.cpp
+@@ -95,7 +95,9 @@ static DefaultMacro internal_macros[] = {
+ 	{DEFAULT_SCHEMA, "fmod", {"x", "y", nullptr}, "(x-y*floor(x/y))"},
+ 	{nullptr, nullptr, {nullptr}, nullptr}};
+ 
+-static unique_ptr<CreateFunctionInfo> GetDefaultFunction(const string &schema, const string &name) {
++static unique_ptr<CreateFunctionInfo> GetDefaultFunction(const string &input_schema, const string &input_name) {
++	auto schema = StringUtil::Lower(input_schema);
++	auto name = StringUtil::Lower(input_name);
+ 	for (idx_t index = 0; internal_macros[index].name != nullptr; index++) {
+ 		if (internal_macros[index].schema == schema && internal_macros[index].name == name) {
+ 			// parse the expression
+diff --git a/src/catalog/default/default_schemas.cpp b/src/catalog/default/default_schemas.cpp
+index 63ea8abde05d..6921dbda621b 100644
+--- a/src/catalog/default/default_schemas.cpp
++++ b/src/catalog/default/default_schemas.cpp
+@@ -1,5 +1,6 @@
+ #include "duckdb/catalog/default/default_schemas.hpp"
+ #include "duckdb/catalog/catalog_entry/schema_catalog_entry.hpp"
++#include "duckdb/common/string_util.hpp"
+ 
+ namespace duckdb {
+ 
+@@ -9,7 +10,8 @@ struct DefaultSchema {
+ 
+ static DefaultSchema internal_schemas[] = {{"information_schema"}, {"pg_catalog"}, {nullptr}};
+ 
+-static bool GetDefaultSchema(const string &schema) {
++static bool GetDefaultSchema(const string &input_schema) {
++	auto schema = StringUtil::Lower(input_schema);
+ 	for (idx_t index = 0; internal_schemas[index].name != nullptr; index++) {
+ 		if (internal_schemas[index].name == schema) {
+ 			return true;
+@@ -23,7 +25,7 @@ DefaultSchemaGenerator::DefaultSchemaGenerator(Catalog &catalog) : DefaultGenera
+ 
+ unique_ptr<CatalogEntry> DefaultSchemaGenerator::CreateDefaultEntry(ClientContext &context, const string &entry_name) {
+ 	if (GetDefaultSchema(entry_name)) {
+-		return make_unique_base<CatalogEntry, SchemaCatalogEntry>(&catalog, entry_name, true);
++		return make_unique_base<CatalogEntry, SchemaCatalogEntry>(&catalog, StringUtil::Lower(entry_name), true);
+ 	}
+ 	return nullptr;
+ }
+diff --git a/src/catalog/default/default_views.cpp b/src/catalog/default/default_views.cpp
+index e3695ef0bfc0..cd23a41784a9 100644
+--- a/src/catalog/default/default_views.cpp
++++ b/src/catalog/default/default_views.cpp
+@@ -4,6 +4,7 @@
+ #include "duckdb/planner/binder.hpp"
+ #include "duckdb/catalog/catalog_entry/schema_catalog_entry.hpp"
+ #include "duckdb/catalog/catalog_entry/view_catalog_entry.hpp"
++#include "duckdb/common/string_util.hpp"
+ 
+ namespace duckdb {
+ 
+@@ -48,7 +49,9 @@ static DefaultView internal_views[] = {
+     {"information_schema", "tables", "SELECT NULL table_catalog, schema_name table_schema, table_name, CASE WHEN temporary THEN 'LOCAL TEMPORARY' ELSE 'BASE TABLE' END table_type, NULL self_referencing_column_name, NULL reference_generation, NULL user_defined_type_catalog, NULL user_defined_type_schema, NULL user_defined_type_name, 'YES' is_insertable_into, 'NO' is_typed, CASE WHEN temporary THEN 'PRESERVE' ELSE NULL END commit_action FROM duckdb_tables() UNION ALL SELECT NULL table_catalog, schema_name table_schema, view_name table_name, 'VIEW' table_type, NULL self_referencing_column_name, NULL reference_generation, NULL user_defined_type_catalog, NULL user_defined_type_schema, NULL user_defined_type_name, 'NO' is_insertable_into, 'NO' is_typed, NULL commit_action FROM duckdb_views;"},
+     {nullptr, nullptr, nullptr}};
+ 
+-static unique_ptr<CreateViewInfo> GetDefaultView(const string &schema, const string &name) {
++static unique_ptr<CreateViewInfo> GetDefaultView(const string &input_schema, const string &input_name) {
++	auto schema = StringUtil::Lower(input_schema);
++	auto name = StringUtil::Lower(input_name);
+ 	for (idx_t index = 0; internal_views[index].name != nullptr; index++) {
+ 		if (internal_views[index].schema == schema && internal_views[index].name == name) {
+ 			auto result = make_unique<CreateViewInfo>();

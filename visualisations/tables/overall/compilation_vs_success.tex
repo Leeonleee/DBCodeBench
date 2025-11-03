@@ -1,0 +1,25 @@
+\begin{table}[!h]
+\centering
+\caption{\label{tab:tab:compilation-vs-success}Compilation vs. test outcomes per model (share of generations; green \textrightarrow{} orange \textrightarrow{} red).}
+\centering
+\begin{tabular}[t]{lccc}
+\toprule
+Model & Compiled; tests passed & Compiled; tests failed & Failed to compile\\
+\midrule
+Claude Sonnet 4\
+(0k Thinking Tokens) & 31.6\% & 57.5\% & 10.9\%\\
+GPT-4o & 11.9\% & 53.3\% & 34.8\%\\
+GPT-5 (Medium Reasoning) & 39.8\% & 47.9\% & 12.3\%\\
+Gemini 2.5 Pro & 37.8\% & 47.4\% & 14.8\%\\
+Kimi K2 0905 & 21.2\% & 48.4\% & 30.4\%\\
+\addlinespace
+Qwen3 Coder & 23.2\% & 59.5\% & 17.3\%\\
+claude-sonnet-4.5_thinking0 & 33.3\% & 51.9\% & 14.8\%\\
+claude-sonnet-4.5_thinking24k & 37.0\% & 49.9\% & 13.1\%\\
+claude-sonnet-4.5_thinking8k & 36.0\% & 52.6\% & 11.4\%\\
+gpt-oss-120b (Medium Reasoning) & 16.3\% & 44.7\% & 39.0\%\\
+\addlinespace
+o3 & 31.6\% & 53.6\% & 14.8\%\\
+\bottomrule
+\end{tabular}
+\end{table}

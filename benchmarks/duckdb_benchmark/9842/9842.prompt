@@ -1,0 +1,61 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Error: INTERNAL Error: Calling DefaultValue() on a generated column
+### What happens?
+
+I clone the package and build the latest release. When executing `pragma_table_info` on a table with generated columns through the DuckDB CLI, an error is returned, ` Error: INTERNAL Error: Calling DefaultValue() on a generated column`.
+
+I've noticed that a similar bug that has been fixed in https://github.com/duckdb/duckdb/issues/8833.
+Since we can properly return the stringified generated expression.
+A suggested Fix may be removing the IF branch in the following code.
+```c++
+// in src/parser/column_definition.cpp
+// Remove the IF branch
+const unique_ptr<ParsedExpression> &ColumnDefinition::DefaultValue() const {
+	if (Generated()) {
+		throw InternalException("Calling DefaultValue() on a generated column");
+	}
+	return expression;
+}
+```
+
+### To Reproduce
+
+```SQL
+create table t1 (c1 int, c2 int generated always as (c1 + 1));
+SELECT * FROM pragma_table_info(t1); -- Error: INTERNAL Error: Calling DefaultValue() on a generated column
+```
+
+### OS:
+
+Ubuntu 22.04LTS x86
+
+### DuckDB Version:
+
+v0.9.3-dev668 802c71dafc
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+Jiansen Song
+
+### Affiliation:
+
+Institute of Software Chinese Academy of Sciences
+
+### Have you tried this on the latest `main` branch?
+
+I have tested with a main build
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

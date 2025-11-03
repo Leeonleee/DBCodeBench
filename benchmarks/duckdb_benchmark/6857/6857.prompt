@@ -1,0 +1,106 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+flatten() segfaults when called on bad input
+### What happens?
+
+Calling `flatten` on a list of literals, as opposed to a list of lists, results in a segfault instead of a user readable error.
+Have not tried this on trunk. This is trivially reproducible for v0.7.1 b00b93f0b1 and master.
+
+### To Reproduce
+
+Just try to `select flatten([1,2]);`. Here's a copy and paste from my duckdb session:
+
+```
+D select flatten([[1,2]]);
+┌─────────────────────────────────────────────────┐
+│ flatten(main.list_value(main.list_value(1, 2))) │
+│                     int32[]                     │
+├─────────────────────────────────────────────────┤
+│ [1, 2]                                          │
+└─────────────────────────────────────────────────┘
+D select flatten([1, 2]);
+zsh: segmentation fault  duckdb
+```
+
+### OS:
+
+MacOS,  M1, arm64
+
+### DuckDB Version:
+
+v0.7.1 b00b93f0b1, 0.7.2-dev1034 
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+Dmitriy Ryaboy
+
+### Affiliation:
+
+Ginkgo Bioworks
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+flatten() segfaults when called on bad input
+### What happens?
+
+Calling `flatten` on a list of literals, as opposed to a list of lists, results in a segfault instead of a user readable error.
+Have not tried this on trunk. This is trivially reproducible for v0.7.1 b00b93f0b1 and master.
+
+### To Reproduce
+
+Just try to `select flatten([1,2]);`. Here's a copy and paste from my duckdb session:
+
+```
+D select flatten([[1,2]]);
+┌─────────────────────────────────────────────────┐
+│ flatten(main.list_value(main.list_value(1, 2))) │
+│                     int32[]                     │
+├─────────────────────────────────────────────────┤
+│ [1, 2]                                          │
+└─────────────────────────────────────────────────┘
+D select flatten([1, 2]);
+zsh: segmentation fault  duckdb
+```
+
+### OS:
+
+MacOS,  M1, arm64
+
+### DuckDB Version:
+
+v0.7.1 b00b93f0b1, 0.7.2-dev1034 
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+Dmitriy Ryaboy
+
+### Affiliation:
+
+Ginkgo Bioworks
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

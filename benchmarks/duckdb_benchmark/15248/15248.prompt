@@ -1,0 +1,278 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Cannot use `rowid` or `row_number() OVER ()` in `ARRAY`
+### What happens?
+
+It isn't possible to use the `rowid` pseudo-column or a `row_number()` window function to work  around the fact that the `ARRAY` operator doesn't preserve order (see https://github.com/duckdb/duckdb/issues/15011).
+
+### To Reproduce
+
+```sql
+CREATE OR REPLACE TABLE df AS (
+    FROM range(1_000_000) SELECT range AS x
+);
+```
+Then
+
+```sql
+SELECT ARRAY(FROM df SELECT x ORDER BY row_number() OVER ());
+```
+```
+BinderException: Binder Error: aggregate function calls cannot contain window function calls
+```
+
+```sql
+SELECT ARRAY(FROM df SELECT x ORDER BY rowid);
+```
+```
+BinderException: Binder Error: Referenced column "rowid" not found in FROM clause!
+Candidate bindings: "unnamed_subquery.x"
+```
+
+Despite both queries within the `ARRAY` operator working on their own:
+
+```sql
+FROM df SELECT x ORDER BY rowid;
+```
+```
+┌────────────────────────┐
+│           x            │
+│         int64          │
+├────────────────────────┤
+│                      0 │
+│                      1 │
+│                      2 │
+│                      3 │
+│                      4 │
+│                      5 │
+│                      6 │
+│                      7 │
+│                      8 │
+│                      9 │
+│                      · │
+│                      · │
+```
+
+and 
+
+```sql
+FROM df SELECT x ORDER BY row_number() OVER ()
+```
+```
+┌────────────────────────┐
+│           x            │
+│         int64          │
+├────────────────────────┤
+│                      0 │
+│                      1 │
+│                      2 │
+│                      3 │
+│                      4 │
+│                      5 │
+│                      6 │
+│                      7 │
+│                      8 │
+│                      9 │
+│                      · │
+```
+
+
+PS:
+
+It is possible to workaround all of this via
+
+```sql
+SELECT ARRAY(SELECT x FROM (SELECT x FROM df ORDER BY row_number() OVER ()));
+```
+
+but I don't understand why (if `ARRAY` generally preserved order, I wouldn't have this problem to begin with, so why does it preserve the order from within a nested subquery?)
+and confusingly it's not possible to use the seemingly equivalent
+
+
+```sql
+SELECT ARRAY(SELECT x FROM (SELECT x FROM df ORDER BY rowid));
+```
+
+I've opened a separate issue about this (#15052).
+
+
+### OS:
+
+Linux
+
+### DuckDB Version:
+
+1.1.0
+
+### DuckDB Client:
+
+Python
+
+### Hardware:
+
+i5, x64
+
+### Full Name:
+
+Soeren Wolfers
+
+### Affiliation:
+
+G-Research
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Not applicable - the reproduction does not require a data set
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+Cannot use `rowid` or `row_number() OVER ()` in `ARRAY`
+### What happens?
+
+It isn't possible to use the `rowid` pseudo-column or a `row_number()` window function to work  around the fact that the `ARRAY` operator doesn't preserve order (see https://github.com/duckdb/duckdb/issues/15011).
+
+### To Reproduce
+
+```sql
+CREATE OR REPLACE TABLE df AS (
+    FROM range(1_000_000) SELECT range AS x
+);
+```
+Then
+
+```sql
+SELECT ARRAY(FROM df SELECT x ORDER BY row_number() OVER ());
+```
+```
+BinderException: Binder Error: aggregate function calls cannot contain window function calls
+```
+
+```sql
+SELECT ARRAY(FROM df SELECT x ORDER BY rowid);
+```
+```
+BinderException: Binder Error: Referenced column "rowid" not found in FROM clause!
+Candidate bindings: "unnamed_subquery.x"
+```
+
+Despite both queries within the `ARRAY` operator working on their own:
+
+```sql
+FROM df SELECT x ORDER BY rowid;
+```
+```
+┌────────────────────────┐
+│           x            │
+│         int64          │
+├────────────────────────┤
+│                      0 │
+│                      1 │
+│                      2 │
+│                      3 │
+│                      4 │
+│                      5 │
+│                      6 │
+│                      7 │
+│                      8 │
+│                      9 │
+│                      · │
+│                      · │
+```
+
+and 
+
+```sql
+FROM df SELECT x ORDER BY row_number() OVER ()
+```
+```
+┌────────────────────────┐
+│           x            │
+│         int64          │
+├────────────────────────┤
+│                      0 │
+│                      1 │
+│                      2 │
+│                      3 │
+│                      4 │
+│                      5 │
+│                      6 │
+│                      7 │
+│                      8 │
+│                      9 │
+│                      · │
+```
+
+
+PS:
+
+It is possible to workaround all of this via
+
+```sql
+SELECT ARRAY(SELECT x FROM (SELECT x FROM df ORDER BY row_number() OVER ()));
+```
+
+but I don't understand why (if `ARRAY` generally preserved order, I wouldn't have this problem to begin with, so why does it preserve the order from within a nested subquery?)
+and confusingly it's not possible to use the seemingly equivalent
+
+
+```sql
+SELECT ARRAY(SELECT x FROM (SELECT x FROM df ORDER BY rowid));
+```
+
+I've opened a separate issue about this (#15052).
+
+
+### OS:
+
+Linux
+
+### DuckDB Version:
+
+1.1.0
+
+### DuckDB Client:
+
+Python
+
+### Hardware:
+
+i5, x64
+
+### Full Name:
+
+Soeren Wolfers
+
+### Affiliation:
+
+G-Research
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Not applicable - the reproduction does not require a data set
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

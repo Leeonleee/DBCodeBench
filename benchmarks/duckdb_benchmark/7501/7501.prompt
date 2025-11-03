@@ -1,0 +1,120 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+PRAGMA database_size in read-only CLI mode does not calculate free/used blocks correctly
+### What happens?
+
+It looks like read-only mode, at least with the CLI, ends up not calculating free/used blocks correctly.  The JDBC driver appears to do it correctly.
+
+```
+$ duckdb example.db "pragma database_size;"
+┌───────────────┬────────────┬──────────────┬─────────────┬─────────────┬──────────┬──────────────┬──────────────┐
+│ database_size │ block_size │ total_blocks │ used_blocks │ free_blocks │ wal_size │ memory_usage │ memory_limit │
+│    varchar    │   int64    │    int64     │    int64    │    int64    │ varchar  │   varchar    │   varchar    │
+├───────────────┼────────────┼──────────────┼─────────────┼─────────────┼──────────┼──────────────┼──────────────┤
+│ 4.7MB         │     262144 │           18 │          12 │           6 │ 0 bytes  │ 0 bytes      │ 27.4GB       │
+└───────────────┴────────────┴──────────────┴─────────────┴─────────────┴──────────┴──────────────┴──────────────┘
+$ duckdb -readonly example.db "pragma database_size;"
+┌───────────────┬────────────┬──────────────┬─────────────┬─────────────┬──────────┬──────────────┬──────────────┐
+│ database_size │ block_size │ total_blocks │ used_blocks │ free_blocks │ wal_size │ memory_usage │ memory_limit │
+│    varchar    │   int64    │    int64     │    int64    │    int64    │ varchar  │   varchar    │   varchar    │
+├───────────────┼────────────┼──────────────┼─────────────┼─────────────┼──────────┼──────────────┼──────────────┤
+│ 4.7MB         │     262144 │           18 │          18 │           0 │ 0 bytes  │ 0 bytes      │ 27.4GB       │
+└───────────────┴────────────┴──────────────┴─────────────┴─────────────┴──────────┴──────────────┴──────────────┘
+```
+
+### To Reproduce
+
+Compare:
+`duckdb -readonly example.db "pragma database_size;"`
+to
+`duckdb example.db "pragma database_size;"`
+
+### OS:
+
+Mac OSX AMD64
+
+### DuckDB Version:
+
+0.6.1
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+Paul Ellsworth
+
+### Affiliation:
+
+Tenable, Inc.
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+PRAGMA database_size in read-only CLI mode does not calculate free/used blocks correctly
+### What happens?
+
+It looks like read-only mode, at least with the CLI, ends up not calculating free/used blocks correctly.  The JDBC driver appears to do it correctly.
+
+```
+$ duckdb example.db "pragma database_size;"
+┌───────────────┬────────────┬──────────────┬─────────────┬─────────────┬──────────┬──────────────┬──────────────┐
+│ database_size │ block_size │ total_blocks │ used_blocks │ free_blocks │ wal_size │ memory_usage │ memory_limit │
+│    varchar    │   int64    │    int64     │    int64    │    int64    │ varchar  │   varchar    │   varchar    │
+├───────────────┼────────────┼──────────────┼─────────────┼─────────────┼──────────┼──────────────┼──────────────┤
+│ 4.7MB         │     262144 │           18 │          12 │           6 │ 0 bytes  │ 0 bytes      │ 27.4GB       │
+└───────────────┴────────────┴──────────────┴─────────────┴─────────────┴──────────┴──────────────┴──────────────┘
+$ duckdb -readonly example.db "pragma database_size;"
+┌───────────────┬────────────┬──────────────┬─────────────┬─────────────┬──────────┬──────────────┬──────────────┐
+│ database_size │ block_size │ total_blocks │ used_blocks │ free_blocks │ wal_size │ memory_usage │ memory_limit │
+│    varchar    │   int64    │    int64     │    int64    │    int64    │ varchar  │   varchar    │   varchar    │
+├───────────────┼────────────┼──────────────┼─────────────┼─────────────┼──────────┼──────────────┼──────────────┤
+│ 4.7MB         │     262144 │           18 │          18 │           0 │ 0 bytes  │ 0 bytes      │ 27.4GB       │
+└───────────────┴────────────┴──────────────┴─────────────┴─────────────┴──────────┴──────────────┴──────────────┘
+```
+
+### To Reproduce
+
+Compare:
+`duckdb -readonly example.db "pragma database_size;"`
+to
+`duckdb example.db "pragma database_size;"`
+
+### OS:
+
+Mac OSX AMD64
+
+### DuckDB Version:
+
+0.6.1
+
+### DuckDB Client:
+
+CLI
+
+### Full Name:
+
+Paul Ellsworth
+
+### Affiliation:
+
+Tenable, Inc.
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

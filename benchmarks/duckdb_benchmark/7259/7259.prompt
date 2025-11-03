@@ -1,0 +1,72 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Wrong update count in JDBC when INSERT .. ON CONFLICT DO NOTHING statement does nothing
+### What happens?
+
+This may or may not be a bug (if it's not, then I suggest documenting this behaviour).
+
+When running an `INSERT .. ON CONFLICT DO NOTHING` statement, which produces a conflict and thus does nothing, I would expect the resulting update count to be `0`, not `1`
+
+### To Reproduce
+
+```java
+try (Statement s = connection.createStatement()) {
+    try {
+        s.executeUpdate("create table t (i int primary key, j int)");
+
+        System.out.println(s.executeUpdate("insert into t values (1, 1) on conflict do nothing"));
+        System.out.println(s.executeUpdate("insert into t values (1, 2) on conflict do nothing"));
+    }
+    finally {
+        s.executeUpdate("drop table t");
+    }
+}
+```
+
+This prints:
+
+```
+1
+1
+```
+
+But I would have expected:
+
+```
+1
+0
+```
+
+### OS:
+
+Microsoft Windows [Version 10.0.22621.1555]
+
+### DuckDB Version:
+
+v0.7.2-dev2430
+
+### DuckDB Client:
+
+JDBC
+
+### Full Name:
+
+Lukas Eder
+
+### Affiliation:
+
+Data Geekery / jOOQ
+
+### Have you tried this on the latest `master` branch?
+
+- [X] I agree
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] I agree
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

@@ -1,0 +1,59 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Fuzzer: DuckDB Internal Error with crafted COLUMNS expression: `Calling StringValue::Get on a NULL value`
+### What happens?
+
+DuckDB throws an internal error with crafted COLUMNS expression: `Calling StringValue::Get on a NULL value`.
+
+### To Reproduce
+
+```sql
+WITH integers AS (SELECT NULL AS i, NULL AS j) SELECT COLUMNS([j,null]) FROM integers
+```
+
+Output:
+```
+INTERNAL Error: Calling StringValue::Get on a NULL value
+```
+
+### OS:
+
+Ubuntu 20.04
+
+### DuckDB Version:
+
+v1.0.0 and v1.0.1-dev3550
+
+### DuckDB Client:
+
+cli
+
+### Full Name:
+
+Jingzhou Fu
+
+### Affiliation:
+
+Wingtecher Lab of Tsinghua University and ShuiMuYuLin Ltd.
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a source build
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Not applicable - the reproduction does not require a data set
+
+### Did you include all code required to reproduce the issue?
+
+- [x] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

@@ -1,0 +1,79 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+False CSE elimination for quantile window functions
+### What happens?
+
+QUANTILE window functions are recognized as the same but they're not. The [CSE elimination](https://github.com/duckdb/duckdb/blob/25617f3135b5867819f32da06e9c846e3788644c/src/execution/physical_plan/plan_window.cpp#L101) seems to miss some information for functions with `bind_info`. 
+
+### To Reproduce
+
+```python
+import duckdb
+
+df = duckdb.query("""
+    select
+        quantile(x, 0.3) over() as q3,
+        quantile(x, 0.7) over() as q7
+    from generate_series(1, 10) as tbl(x)
+""").df()
+print(df)
+```
+The above code produces:
+```
+   q3  q7
+0   3   3
+1   3   3
+2   3   3
+3   3   3
+4   3   3
+5   3   3
+6   3   3
+7   3   3
+8   3   3
+9   3   3
+```
+But `q7` should be `7`.
+
+Adding
+```c++
+if (bind_info.get() != other.bind_info.get()) {
+	if (!bind_info || !other.bind_info || !bind_info->Equals(*other.bind_info)) {
+		return false;
+	}
+}
+```
+to the [`BoundWindowExpression::Equals(const BaseExpression &other_p)`](https://github.com/duckdb/duckdb/blob/25617f3135b5867819f32da06e9c846e3788644c/src/planner/expression/bound_window_expression.cpp#L44) function appears to fix this problem.
+
+### OS:
+
+Ubuntu 22.04.2 LTS, aarch64
+
+### DuckDB Version:
+
+0.9.3.dev2108
+
+### DuckDB Client:
+
+Python
+
+### Full Name:
+
+Mark
+
+### Affiliation:
+
+bq
+
+### Have you tried this on the latest `main` branch?
+
+I have tested with a main build
+
+### Have you tried the steps to reproduce? Do they include all relevant data and configuration? Does the issue you report still appear there?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

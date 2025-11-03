@@ -1,0 +1,26 @@
+diff --git a/test/sql/function/list/list_zip.test b/test/sql/function/list/list_zip.test
+index da2ef5a8832c..243b14b1df26 100644
+--- a/test/sql/function/list/list_zip.test
++++ b/test/sql/function/list/list_zip.test
+@@ -44,6 +44,21 @@ SELECT list_zip([1,2,3], [1,2])
+ ----
+ [(1, 1), (2, 2), (3, NULL)]
+ 
++query I
++SELECT list_zip([1, 2, 3]::int[3], [1, 2]::int[2], true)
++----
++[(1, 1), (2, 2)]
++
++query I
++SELECT list_zip([1, 2, 3]::int[3], [1, 2, 3]::int[3])
++----
++[(1, 1), (2, 2), (3, 3)]
++
++query I
++SELECT list_zip([1, '2', 3]::int[], [1, 2, 3]::int[3])
++----
++[(1, 1), (2, 2), (3, 3)]
++
+ query I
+ SELECT list_zip([1,2], [1,2,3])
+ ----

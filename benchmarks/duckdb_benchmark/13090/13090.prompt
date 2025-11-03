@@ -1,0 +1,55 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+list_cosine_similarity([], []) gives -1
+### What happens?
+
+I'm not positive what the expected behavior should be, it's not particularly well-defined, but I think NULL would be a lot better than -1. -1 means "pointing in opposite directions" which isn't quite right.
+
+### To Reproduce
+
+```sql
+SELECT list_cosine_similarity([],[]);`
+```
+results in -1
+
+### OS:
+
+https://shell.duckdb.org/
+
+### DuckDB Version:
+
+v1.0.0
+
+### DuckDB Client:
+
+https://shell.duckdb.org/
+
+### Full Name:
+
+Nick Crews
+
+### Affiliation:
+
+Ship Creek Group
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

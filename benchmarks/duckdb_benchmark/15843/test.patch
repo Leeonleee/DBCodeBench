@@ -1,0 +1,21 @@
+diff --git a/test/sql/catalog/function/query_function.test b/test/sql/catalog/function/query_function.test
+index 0d65fa65b4ac..1ef00218e192 100644
+--- a/test/sql/catalog/function/query_function.test
++++ b/test/sql/catalog/function/query_function.test
+@@ -249,6 +249,16 @@ FROM query_table('SELECT 4 + 2');
+ ----
+ Catalog Error: Table with name SELECT 4 + 2 does not exist!
+ 
++query I
++SELECT f.* FROM query_table('tbl_int') as f;
++----
++42
++
++query I
++SELECT f.x FROM query_table('tbl_int') as f(x);
++----
++42
++
+ # test by_name argument
+ query I
+ FROM query_table(['tbl_int', 'tbl_varchar', 'tbl_empty', 'tbl2_varchar'], false);

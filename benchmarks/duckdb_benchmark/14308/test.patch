@@ -1,0 +1,55 @@
+diff --git a/test/sql/aggregate/aggregates/test_corr.test b/test/sql/aggregate/aggregates/test_corr.test
+index 4504f2c570b8..8b391312e384 100644
+--- a/test/sql/aggregate/aggregates/test_corr.test
++++ b/test/sql/aggregate/aggregates/test_corr.test
+@@ -18,7 +18,7 @@ NULL
+ query I
+ select corr(1,1)
+ ----
+-NAN
++NULL
+ 
+ statement error
+ select corr(*)
+diff --git a/test/sql/aggregate/aggregates/test_regression.test b/test/sql/aggregate/aggregates/test_regression.test
+index 4a807c063446..196526459df6 100644
+--- a/test/sql/aggregate/aggregates/test_regression.test
++++ b/test/sql/aggregate/aggregates/test_regression.test
+@@ -72,7 +72,7 @@ NULL
+ query I
+ select regr_slope(1,1)
+ ----
+-NAN
++NULL
+ 
+ statement error
+ select regr_slope(*)
+diff --git a/test/sql/aggregate/aggregates/test_skewness.test b/test/sql/aggregate/aggregates/test_skewness.test
+index 3a21a4673269..ad3cf4c8a352 100644
+--- a/test/sql/aggregate/aggregates/test_skewness.test
++++ b/test/sql/aggregate/aggregates/test_skewness.test
+@@ -28,7 +28,7 @@ select skewness(*)
+ query I
+ select skewness (10) from range (5)
+ ----
+-NAN
++NULL
+ 
+ #Empty Table
+ query I
+diff --git a/test/sql/function/list/aggregates/skewness.test b/test/sql/function/list/aggregates/skewness.test
+index 5be729491cc1..70d75e65ce26 100644
+--- a/test/sql/function/list/aggregates/skewness.test
++++ b/test/sql/function/list/aggregates/skewness.test
+@@ -19,11 +19,6 @@ CREATE TABLE skew AS SELECT LIST(10) AS i FROM range(5) t1(i)
+ query I
+ select list_skewness (i) from skew
+ ----
+-NAN
+-
+-query I
+-select list_skewness ([1,2])
+-----
+ NULL
+ 
+ # out of range

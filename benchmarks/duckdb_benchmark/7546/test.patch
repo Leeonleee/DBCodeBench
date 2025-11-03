@@ -1,0 +1,72 @@
+diff --git a/test/sql/aggregate/aggregates/test_mode.test b/test/sql/aggregate/aggregates/test_mode.test
+index 3b1b2762a8b9..c19abbae132a 100644
+--- a/test/sql/aggregate/aggregates/test_mode.test
++++ b/test/sql/aggregate/aggregates/test_mode.test
+@@ -281,3 +281,20 @@ select k, v, mode(v) over (partition by k)
+ 2	2	2
+ 2	5	2
+ 3	1	1
++
++# MODE is order-sensitive, so this should bind and return the larger value
++query I
++SELECT MODE(order_occurrences ORDER BY order_occurrences DESC) FROM (
++VALUES
++	(500, 1),
++	(1000, 2),
++	(800, 3),
++	(1000, 4),
++	(500, 5),
++	(550, 6),
++	(400, 7),
++	(200, 8),
++	(10, 9)
++)items_per_order(order_occurrences, item_count);
++----
++1000
+diff --git a/test/sql/aggregate/aggregates/test_ordered_aggregates.test b/test/sql/aggregate/aggregates/test_ordered_aggregates.test
+index 7d021e8327cb..be854b7080fe 100644
+--- a/test/sql/aggregate/aggregates/test_ordered_aggregates.test
++++ b/test/sql/aggregate/aggregates/test_ordered_aggregates.test
+@@ -87,6 +87,23 @@ FROM VALUES (11000), (3100), (2900), (2800), (2600), (2500) AS tab(col);
+ ----
+ [3100, 2900, 2600]
+ 
++# MODE is order-sensitive
++query I
++SELECT MODE() WITHIN GROUP (ORDER BY order_occurrences DESC) FROM (
++VALUES
++	(500, 1),
++	(1000, 2),
++	(800, 3),
++	(1000, 4),
++	(500, 5),
++	(550, 6),
++	(400, 7),
++	(200, 8),
++	(10, 9)
++) items_per_order(order_occurrences, item_count);
++----
++1000
++
+ #
+ # Error checking
+ #
+diff --git a/test/sql/types/timestamp/test_infinite_time.test b/test/sql/types/timestamp/test_infinite_time.test
+index 7a97f977f1b4..f3cff00d0182 100644
+--- a/test/sql/types/timestamp/test_infinite_time.test
++++ b/test/sql/types/timestamp/test_infinite_time.test
+@@ -135,13 +135,7 @@ query III
+ SELECT MODE(ts), MODE(tstz), MODE(dt)
+ FROM specials;
+ ----
+--infinity	-infinity	-infinity
+-
+-query III
+-SELECT MODE(ts), MODE(tstz), MODE(dt)
+-FROM specials;
+-----
+--infinity	-infinity	-infinity
++infinity	infinity	infinity
+ 
+ query III
+ SELECT APPROX_COUNT_DISTINCT(ts), APPROX_COUNT_DISTINCT(tstz), APPROX_COUNT_DISTINCT(dt)

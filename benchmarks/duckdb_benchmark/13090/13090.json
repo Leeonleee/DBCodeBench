@@ -1,0 +1,22 @@
+{
+  "repo": "duckdb/duckdb",
+  "pull_number": 13090,
+  "instance_id": "duckdb__duckdb-13090",
+  "issue_numbers": [
+    "12960"
+  ],
+  "base_commit": "18254ec5d9162db2e4aeec8159691a3b17217494",
+  "patch": "diff --git a/src/core_functions/scalar/list/list_cosine_similarity.cpp b/src/core_functions/scalar/list/list_cosine_similarity.cpp\nindex 72607752661c..97fcc5c033d6 100644\n--- a/src/core_functions/scalar/list/list_cosine_similarity.cpp\n+++ b/src/core_functions/scalar/list/list_cosine_similarity.cpp\n@@ -17,6 +17,9 @@ static void ListCosineSimilarity(DataChunk &args, ExpressionState &, Vector &res\n \tauto &left_child = ListVector::GetEntry(left);\n \tauto &right_child = ListVector::GetEntry(right);\n \n+\tleft_child.Flatten(left_count);\n+\tright_child.Flatten(right_count);\n+\n \tD_ASSERT(left_child.GetVectorType() == VectorType::FLAT_VECTOR);\n \tD_ASSERT(right_child.GetVectorType() == VectorType::FLAT_VECTOR);\n \n@@ -41,6 +44,10 @@ static void ListCosineSimilarity(DataChunk &args, ExpressionState &, Vector &res\n \n \t\t    auto dimensions = left.length;\n \n+\t\t    if (dimensions == 0) {\n+\t\t\t    throw InvalidInputException(\"The cosine similarity for empty vectors is not defined\");\n+\t\t    }\n+\n \t\t    NUMERIC_TYPE distance = 0;\n \t\t    NUMERIC_TYPE norm_l = 0;\n \t\t    NUMERIC_TYPE norm_r = 0;\ndiff --git a/src/core_functions/scalar/list/list_distance.cpp b/src/core_functions/scalar/list/list_distance.cpp\nindex aa70e4a1309d..476235ce096c 100644\n--- a/src/core_functions/scalar/list/list_distance.cpp\n+++ b/src/core_functions/scalar/list/list_distance.cpp\n@@ -16,6 +16,9 @@ static void ListDistance(DataChunk &args, ExpressionState &, Vector &result) {\n \tauto &left_child = ListVector::GetEntry(left);\n \tauto &right_child = ListVector::GetEntry(right);\n \n+\tleft_child.Flatten(left_count);\n+\tright_child.Flatten(right_count);\n+\n \tD_ASSERT(left_child.GetVectorType() == VectorType::FLAT_VECTOR);\n \tD_ASSERT(right_child.GetVectorType() == VectorType::FLAT_VECTOR);\n \n",
+  "test_patch": "diff --git a/test/sql/function/list/list_cosine_similarity.test b/test/sql/function/list/list_cosine_similarity.test\nindex 9bcfe40a0961..4033215aa2c8 100644\n--- a/test/sql/function/list/list_cosine_similarity.test\n+++ b/test/sql/function/list/list_cosine_similarity.test\n@@ -38,5 +38,9 @@ SELECT list_cosine_similarity([1, 2, 3]::${type}[], [1, 2, 3, 4]::${type}[]);\n ----\n list dimensions must be equal, got left length 3 and right length 4\n \n+statement error\n+SELECT list_cosine_similarity([], []);\n+----\n+The cosine similarity for empty vectors is not defined\n \n endloop\ndiff --git a/test/sql/function/list/list_distance.test b/test/sql/function/list/list_distance.test\nindex bc9f2a83f387..6bcb42284948 100644\n--- a/test/sql/function/list/list_distance.test\n+++ b/test/sql/function/list/list_distance.test\n@@ -39,5 +39,9 @@ SELECT list_distance([1, 2, 3]::${type}[], [1, 2, 3, 4]::${type}[]);\n ----\n list dimensions must be equal, got left length 3 and right length 4\n \n+query I\n+SELECT list_distance([], []);\n+----\n+0.0\n \n endloop\n",
+  "problem_statement": "list_cosine_similarity([], []) gives -1\n### What happens?\n\nI'm not positive what the expected behavior should be, it's not particularly well-defined, but I think NULL would be a lot better than -1. -1 means \"pointing in opposite directions\" which isn't quite right.\n\n### To Reproduce\n\n```sql\r\nSELECT list_cosine_similarity([],[]);`\r\n```\r\nresults in -1\n\n### OS:\n\nhttps://shell.duckdb.org/\n\n### DuckDB Version:\n\nv1.0.0\n\n### DuckDB Client:\n\nhttps://shell.duckdb.org/\n\n### Full Name:\n\nNick Crews\n\n### Affiliation:\n\nShip Creek Group\n\n### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.\n\nI have tested with a stable release\n\n### Did you include all relevant data sets for reproducing the issue?\n\nYes\n\n### Did you include all code required to reproduce the issue?\n\n- [X] Yes, I have\n\n### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?\n\n- [X] Yes, I have\n",
+  "hints_text": "",
+  "created_at": "2024-07-20T05:56:31Z",
+  "modified_files": [
+    "src/core_functions/scalar/list/list_cosine_similarity.cpp",
+    "src/core_functions/scalar/list/list_distance.cpp"
+  ],
+  "modified_test_files": [
+    "test/sql/function/list/list_cosine_similarity.test",
+    "test/sql/function/list/list_distance.test"
+  ]
+}

@@ -1,0 +1,94 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+Parquet Write value count mismatch when writing DELTA_BINARY_PACKED
+### What happens?
+
+Writing out a Parquet file using COPY hits an assertion failure. Works in DuckDB 1.2, but not in main HEAD compiled 2025/02/18.
+
+Data source: https://noaa-ghcn-pds.s3.amazonaws.com/index.html#parquet/by_year/
+
+### To Reproduce
+
+```sql
+COPY (
+    SELECT * FROM read_parquet('**/*.parquet', union_by_name = true)
+    WHERE year
+    BETWEEN 2010 AND 2015 ORDER BY element, obs_time
+)
+TO 'weather_v2_zstd_2025_02_18_HEAD.parquet'
+(PARQUET_VERSION V2, COMPRESSION 'zstd');
+```
+
+```
+INTERNAL Error:
+value count mismatch when writing DELTA_BINARY_PACKED
+
+Stack Trace:
+
+0        duckdb::Exception::Exception(duckdb::ExceptionType, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>> const&) + 64
+1        duckdb::InternalException::InternalException(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>> const&) + 20
+2        duckdb::DbpEncoder::FinishWrite(duckdb::WriteStream&) + 128
+3        duckdb::StandardColumnWriter<duckdb::string_t, duckdb::string_t, duckdb::ParquetStringOperator>::FlushPageState(duckdb::WriteStream&, duckdb::ColumnWriterPageState*) + 268
+4        duckdb::PrimitiveColumnWriter::FlushPage(duckdb::PrimitiveColumnWriterState&) + 124
+5        duckdb::PrimitiveColumnWriter::NextPage(duckdb::PrimitiveColumnWriterState&) + 52
+6        duckdb::PrimitiveColumnWriter::Write(duckdb::ColumnWriterState&, duckdb::Vector&, unsigned long long) + 204
+7        duckdb::ParquetWriter::PrepareRowGroup(duckdb::ColumnDataCollection&, duckdb::PreparedRowGroup&) + 6036
+8        duckdb::ParquetWritePrepareBatch(duckdb::ClientContext&, duckdb::FunctionData&, duckdb::GlobalFunctionData&, duckdb::unique_ptr<duckdb::ColumnDataCollection, std::__1::default_delete<duckdb::ColumnDataCollection>, true>) + 144
+9        duckdb::PrepareBatchTask::Execute(duckdb::PhysicalBatchCopyToFile const&, duckdb::ClientContext&, duckdb::GlobalSinkState&) + 132
+10       duckdb::PhysicalBatchCopyToFile::ExecuteTask(duckdb::ClientContext&, duckdb::GlobalSinkState&) const + 232
+11       duckdb::ProcessRemainingBatchesTask::ExecuteTask(duckdb::TaskExecutionMode) + 32
+12       duckdb::ExecutorTask::Execute(duckdb::TaskExecutionMode) + 236
+13       duckdb::TaskScheduler::ExecuteForever(std::__1::atomic<bool>*) + 612
+14       void* std::__1::__thread_proxy[abi:ne180100]<std::__1::tuple<std::__1::unique_ptr<std::__1::__thread_struct, std::__1::default_delete<std::__1::__thread_struct>>, void (*)(duckdb::TaskScheduler*, std::__1::atomic<bool>*), duckdb::TaskScheduler*, std::__1::atomic<bool>*>>(void*) + 56
+15       _pthread_start + 136
+16       thread_start + 8
+
+This error signals an assertion failure within DuckDB. This usually occurs due to unexpected conditions or errors in the program's logic.
+For more information, see https://duckdb.org/docs/dev/internal_errors
+```
+
+### OS:
+
+macOS Sequoia 15.3.1
+
+### DuckDB Version:
+
+main/HEAD e249a40c8be4709c6aae693bc8bf2c012cc3d6b2
+
+### DuckDB Client:
+
+CLI
+
+### Hardware:
+
+_No response_
+
+### Full Name:
+
+Alejandro Wainzinger
+
+### Affiliation:
+
+N/A
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a source build
+
+### Did you include all relevant data sets for reproducing the issue?
+
+No - I cannot easily share my data sets due to their large size
+
+### Did you include all code required to reproduce the issue?
+
+- [x] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [x] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:

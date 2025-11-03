@@ -1,0 +1,204 @@
+You will be provided with a partial code base and an issue statement explaining a problem to resolve.
+
+<issue>
+DuckDB Internal Error: types == input.GetTypes()
+### What happens?
+
+The latest version of the DuckDB (latest main: v1.1.4-dev3916 13ff921d7c and released version v1.1.3 19864453f7) triggers Internal Error when running the following SQL statement: 
+
+```sql
+CREATE TABLE v00 AS ( SELECT 'string' ); 
+SELECT DISTINCT 'string' AS c01 FROM v00, LATERAL ( WITH ta02 AS MATERIALIZED ( SELECT 'string' ) ( SELECT 'string' ) INTERSECT ALL ( SELECT 'string' ) );
+```
+
+Here is the stack trace from (v1.1.4-dev3916 13ff921d7c)
+
+```
+INTERNAL Error: Assertion triggered in file "/home/duckdb/duckdb/src/common/types/column/column_data_collection.cpp" on line 794: types == input.GetTypes()
+
+#0  duckdb::InternalException::InternalException (this=0xffff80002b80, Python Exception <class 'gdb.error'> There is no member named _M_dataplus.:
+msg=) at /home/duckdb/duckdb/src/common/exception.cpp:320
+#1  0x00000000004f0950 in duckdb::InternalException::InternalException<unsigned long, unsigned long> (this=0xffff80002b80, Python Exception <class 'gdb.error'> There is no member named _M_dataplus.:
+msg=, params=1, params=1)
+    at ../../src/include/duckdb/common/exception.hpp:313
+#2  duckdb::vector<duckdb::Vector, true>::AssertIndexInBounds (index=1, size=1) at ../../src/include/duckdb/common/vector.hpp:35
+#3  0x0000000000a02f60 in duckdb::vector<duckdb::Vector, true>::get<true> (this=0xffff80000f88, __n=1) at ../../src/include/duckdb/common/vector.hpp:62
+#4  duckdb::vector<duckdb::Vector, true>::operator[] (this=0xffff80000f88, __n=1) at ../../src/include/duckdb/common/vector.hpp:76
+#5  duckdb::ColumnDataCollection::Append (this=0xffff78000c50, state=..., input=...)
+    at /home/duckdb/duckdb/src/common/types/column/column_data_collection.cpp:806
+#6  0x000000000454df74 in duckdb::PhysicalCrossProduct::Sink (this=<optimized out>, context=..., chunk=..., input=...)
+    at /home/duckdb/duckdb/src/execution/operator/join/physical_cross_product.cpp:38
+#7  0x0000000001ac48c8 in duckdb::PipelineExecutor::Sink (this=0xffff80000e60, chunk=..., input=...)
+    at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:521
+#8  duckdb::PipelineExecutor::ExecutePushInternal (this=0xffff80000e60, input=..., chunk_budget=..., initial_idx=1)
+    at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:332
+#9  0x0000000001ac3858 in duckdb::PipelineExecutor::TryFlushCachingOperators (this=0xffff80000e60, chunk_budget=...)
+    at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:94
+#10 0x0000000001ab4710 in duckdb::PipelineExecutor::Execute (this=0xffff80000e60, max_chunks=<optimized out>)
+    at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:211
+#11 0x0000000001ab2994 in duckdb::PipelineExecutor::Execute (this=0xffff80000e60) at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:278
+#12 duckdb::PipelineTask::ExecuteTask (this=0xffff7c000d90, mode=duckdb::TaskExecutionMode::PROCESS_ALL)
+    at /home/duckdb/duckdb/src/parallel/pipeline.cpp:51
+#13 0x0000000001a9680c in duckdb::ExecutorTask::Execute (this=0xffff7c000d90, mode=duckdb::TaskExecutionMode::PROCESS_ALL)
+    at /home/duckdb/duckdb/src/parallel/executor_task.cpp:49
+#14 0x0000000001ad2fd0 in duckdb::TaskScheduler::ExecuteForever (this=0x3a174910, marker=0x3a207060)
+    at /home/duckdb/duckdb/src/parallel/task_scheduler.cpp:189
+#15 0x0000ffff9b760f9c in ?? () from /lib/aarch64-linux-gnu/libstdc++.so.6
+#16 0x0000ffff9b880624 in start_thread (arg=0xffff9b760f80) at pthread_create.c:477
+#17 0x0000ffff9b52362c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone.S:78
+```
+
+### To Reproduce
+
+1. Clone the DuckDB Git from the official repo.
+2. Checkout to the latest main (v1.1.4-dev3916 13ff921d7c).
+3. Compile the DuckDB binary by using `make debug`.
+4. Run the compiled DuckDB and input the following SQL: 
+
+```sql
+CREATE TABLE v00 AS ( SELECT 'string' ); 
+SELECT DISTINCT 'string' AS c01 FROM v00, LATERAL ( WITH ta02 AS MATERIALIZED ( SELECT 'string' ) ( SELECT 'string' ) INTERSECT ALL ( SELECT 'string' ) );
+```
+
+### OS:
+
+Ubuntu 24.04 LTS
+
+### DuckDB Version:
+
+v1.1.4-dev3916 13ff921d7c
+
+### DuckDB Client:
+
+cli
+
+### Hardware:
+
+_No response_
+
+### Full Name:
+
+Yu Liang
+
+### Affiliation:
+
+The Pennsylvania State University
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+DuckDB Internal Error: types == input.GetTypes()
+### What happens?
+
+The latest version of the DuckDB (latest main: v1.1.4-dev3916 13ff921d7c and released version v1.1.3 19864453f7) triggers Internal Error when running the following SQL statement: 
+
+```sql
+CREATE TABLE v00 AS ( SELECT 'string' ); 
+SELECT DISTINCT 'string' AS c01 FROM v00, LATERAL ( WITH ta02 AS MATERIALIZED ( SELECT 'string' ) ( SELECT 'string' ) INTERSECT ALL ( SELECT 'string' ) );
+```
+
+Here is the stack trace from (v1.1.4-dev3916 13ff921d7c)
+
+```
+INTERNAL Error: Assertion triggered in file "/home/duckdb/duckdb/src/common/types/column/column_data_collection.cpp" on line 794: types == input.GetTypes()
+
+#0  duckdb::InternalException::InternalException (this=0xffff80002b80, Python Exception <class 'gdb.error'> There is no member named _M_dataplus.:
+msg=) at /home/duckdb/duckdb/src/common/exception.cpp:320
+#1  0x00000000004f0950 in duckdb::InternalException::InternalException<unsigned long, unsigned long> (this=0xffff80002b80, Python Exception <class 'gdb.error'> There is no member named _M_dataplus.:
+msg=, params=1, params=1)
+    at ../../src/include/duckdb/common/exception.hpp:313
+#2  duckdb::vector<duckdb::Vector, true>::AssertIndexInBounds (index=1, size=1) at ../../src/include/duckdb/common/vector.hpp:35
+#3  0x0000000000a02f60 in duckdb::vector<duckdb::Vector, true>::get<true> (this=0xffff80000f88, __n=1) at ../../src/include/duckdb/common/vector.hpp:62
+#4  duckdb::vector<duckdb::Vector, true>::operator[] (this=0xffff80000f88, __n=1) at ../../src/include/duckdb/common/vector.hpp:76
+#5  duckdb::ColumnDataCollection::Append (this=0xffff78000c50, state=..., input=...)
+    at /home/duckdb/duckdb/src/common/types/column/column_data_collection.cpp:806
+#6  0x000000000454df74 in duckdb::PhysicalCrossProduct::Sink (this=<optimized out>, context=..., chunk=..., input=...)
+    at /home/duckdb/duckdb/src/execution/operator/join/physical_cross_product.cpp:38
+#7  0x0000000001ac48c8 in duckdb::PipelineExecutor::Sink (this=0xffff80000e60, chunk=..., input=...)
+    at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:521
+#8  duckdb::PipelineExecutor::ExecutePushInternal (this=0xffff80000e60, input=..., chunk_budget=..., initial_idx=1)
+    at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:332
+#9  0x0000000001ac3858 in duckdb::PipelineExecutor::TryFlushCachingOperators (this=0xffff80000e60, chunk_budget=...)
+    at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:94
+#10 0x0000000001ab4710 in duckdb::PipelineExecutor::Execute (this=0xffff80000e60, max_chunks=<optimized out>)
+    at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:211
+#11 0x0000000001ab2994 in duckdb::PipelineExecutor::Execute (this=0xffff80000e60) at /home/duckdb/duckdb/src/parallel/pipeline_executor.cpp:278
+#12 duckdb::PipelineTask::ExecuteTask (this=0xffff7c000d90, mode=duckdb::TaskExecutionMode::PROCESS_ALL)
+    at /home/duckdb/duckdb/src/parallel/pipeline.cpp:51
+#13 0x0000000001a9680c in duckdb::ExecutorTask::Execute (this=0xffff7c000d90, mode=duckdb::TaskExecutionMode::PROCESS_ALL)
+    at /home/duckdb/duckdb/src/parallel/executor_task.cpp:49
+#14 0x0000000001ad2fd0 in duckdb::TaskScheduler::ExecuteForever (this=0x3a174910, marker=0x3a207060)
+    at /home/duckdb/duckdb/src/parallel/task_scheduler.cpp:189
+#15 0x0000ffff9b760f9c in ?? () from /lib/aarch64-linux-gnu/libstdc++.so.6
+#16 0x0000ffff9b880624 in start_thread (arg=0xffff9b760f80) at pthread_create.c:477
+#17 0x0000ffff9b52362c in thread_start () at ../sysdeps/unix/sysv/linux/aarch64/clone.S:78
+```
+
+### To Reproduce
+
+1. Clone the DuckDB Git from the official repo.
+2. Checkout to the latest main (v1.1.4-dev3916 13ff921d7c).
+3. Compile the DuckDB binary by using `make debug`.
+4. Run the compiled DuckDB and input the following SQL: 
+
+```sql
+CREATE TABLE v00 AS ( SELECT 'string' ); 
+SELECT DISTINCT 'string' AS c01 FROM v00, LATERAL ( WITH ta02 AS MATERIALIZED ( SELECT 'string' ) ( SELECT 'string' ) INTERSECT ALL ( SELECT 'string' ) );
+```
+
+### OS:
+
+Ubuntu 24.04 LTS
+
+### DuckDB Version:
+
+v1.1.4-dev3916 13ff921d7c
+
+### DuckDB Client:
+
+cli
+
+### Hardware:
+
+_No response_
+
+### Full Name:
+
+Yu Liang
+
+### Affiliation:
+
+The Pennsylvania State University
+
+### What is the latest build you tested with? If possible, we recommend testing with the latest nightly build.
+
+I have tested with a stable release
+
+### Did you include all relevant data sets for reproducing the issue?
+
+Yes
+
+### Did you include all code required to reproduce the issue?
+
+- [X] Yes, I have
+
+### Did you include all relevant configuration (e.g., CPU architecture, Python version, Linux distribution) to reproduce the issue?
+
+- [X] Yes, I have
+</issue>
+
+I need you to solve the provided issue by generating a code fix that can be applied directly to the repository
+
+Respond below:
