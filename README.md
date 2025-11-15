@@ -1,161 +1,183 @@
-# honours
+# DBCodeBench
 
-## Repositories
+DBCodeBench is a reproducible benchmark for evaluating large language models (LLMs) on real-world C++ DBMS bug-fixing tasks. It provides a verified dataset and an automated pipeline for generating, applying, compiling, and testing LLM-produced patches against DuckDB.
 
-- duckdb/duckdb
+This benchmark is intended for researchers and engineers studying how well LLMs can fix bugs in large, real-world C++ systems code — going beyond small function-level problems and into realistic system-level patches.
 
-## Environment Setup
+## Highlights
 
-- For maximum compatability, use an Amazon Linux 2023 image
-- Once setup, run these commands:
-
-```bash
-sudo dnf update -y
-sudo dnf groupinstall "Development Tools" -y
-sudo dnf install gcc cmake git wget -y
-sudo dnf install cmake
-
-# Install ccache to speed up compilation times when rerunning benchmark
-git clone https://github.com/ccache/ccache.git
-cd ccache
-mkdir build && cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-make -j$(nproc)
-sudo make install
-
-# Python dependencies
-```
-
-### Personal config stuff (optional)
-
-```bash
-export TERM=xterm-256color # makes kitty terminal work
+- 81 verified, real-world C++ bug-fixing tasks extracted from DuckDB.
+- Automated pipeline: patch generation, patch application, compilation (GCC/CMake), and test execution.
+- Reproducible Docker environment for consistent compilation and testing.
+- Difficulty proxies per task (lines changed, files modified, tests modified) and analysis scripts for pass@k, build success, and difficulty correlations.
 
 
-```
+## Installation & Setup
 
-### Git setup
-
-```bash
-# Create ssh key for GitHub
-mkdir -p ~/.ssh
-ssh-keygen -t rsa -b 4096 # press enter for everything
-cat ~/.ssh/id_rsa.pub # copy the output and paste it into GitHub
-git clone git@github.com:Leeonleee/honours.git
-
-cd honours
-git clone git@github.com:duckdb/duckdb.git
-
-```
-## Folder Structure
-
-```none
-project
-│   README.md
-│   requirements.txt  
-│
-└───prs
-|   |   duckdb-task-instances.jsonl
-│   │
-│   └───15277
-|   |   └───15277.json
-│   └───15287
-│   |   └───15287.json
-│   └───...
-│   
-└───scripts
-    │   create_prompt.py
-    │   decode_patch.py
-    |   tasks_to_json.py
-    |   README.md
-```
-
-- `prs`: contains individual valid PRs, with the following format:
-
-```json
-{
-    "repo": "repo/repo",
-    "pull_number": 12345,
-    "instance_id": "repo__repo-12345",
-    "issue_numbers": [
-        "11111"
-    ],
-    "base_commit": "commit_sha",
-    "patch": "diff file_1 file_2",
-    "test_patch": "diff file_1 file_2",
-    "problem_statement": "problem statement",
-    "hints_text": "\n",
-    "created_at": "date"
-}
-```
-
-## Manually Verify Individual PRs
-
-1. Git Clone `ducksdb`
-2. Choose a PR/issue
-    - Create the `.prompt`, `fix.patch`, and `test.patch` files by running `process_single_pr.py <path_to_pr_folder> <path_to_duckdb_repo>`
-3. `git checkout` to the PRs commit
-4. Compile the code using `make -j$(nproc)` and run tests to make sure no tests fail (if time matters, only run the test that is modified in the patch)
-    - May need to change `cmake` or `gcc`
-5. Apply the `test.patch`, recompile if necessary and run the modified test
-    - This time the test should fail
-    - If time is not a concern, run all test suites to ensure there is no other bug in the codebase
-6. Apply the `fix.patch`, recompile then run the modified test
-    - This time the test should pass
-    - If time is not a concern, run all test suites to ensure there is no other bug in the codebase
-
-If the tests behave as expected after step 6, the PR has been verified and is ready for the LLM to test a fix
-
-## Automatically Verify Individual PRs
-
-1. Run the `scripts/verify_PRs.py` script
-    - Make sure the paths in the script are set correctly. They should be relative to the script's location
-2. The script should output the names of all valid PRs
-
-
-## Manually Verified PRs
-
-- 5805
-
-
-## Easy PRs
-
-A PR is considered easy if:
-
-- the patch line length <= 40
-- changes files <= 1
-- problem statement length <= 1000
-- if it doesn't contain new control flow `if (,` `for (`, `while (`
-
-### List of Easy PRs
-
-- 342
-- 4250
-- 4654
-- 4713
-- 4810
-- 4973
-- 5805
-- 7443
-- 12942
-
-Out of these tests, these are verified:
-- 4713
-- 4973
-- 5805
-- 12942
-
-## Running the Benchmark
+The following steps walks through setting up DBCodeBench in a Docker container. We use the `gcc:11` Docker image to ensure consistent compilation and testing across different machines.
 
 ### Prerequisites
-- Ensure you have the `llm` Python library installed
-  - Install any plugins for it if necessary (the library supports OpenAI models initially)
 
+- Docker installed on your host machine
+- Git configured with SSH access to GitHub
+- At least 20GB of free disk space
 
-## Aider Test
+#### 1. Docker Environment
 
-Example command:
+Pull and start the GCC 11 Docker container:
 
 ```bash
-aider --model o3 --no-gitignore -f ../aider_test/4713/4713.prompt src/function/table/read_csv.cpp
+# Pull the official GCC 11 image
+docker pull gcc:11
+
+# Create and start the container
+docker run -it --name duckdb-bench gcc:11 bash
+
+# For subsequent sessions, use:
+docker start duckdb-bench
+docker exec -it duckdb-bench bash
 ```
+
+#### 2. SSH setup
+
+Generate SSH keys for cloning repositories
+
+```bash
+mkdir -p ~/.ssh
+ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -N ""
+
+# Display your public key to add to GitHub
+cat ~/.ssh/id_rsa.pub
+```
+
+Copy the output and add it to your GitHub account.
+
+#### 3. Clone Repositories
+
+```bash
+# Clone the benchmark repository
+cd ~
+git clone git@github.com:Leeonleee/DBCodeBench.git
+
+# Clone DuckDB into the repos directory
+cd DBCodeBench/repos/
+git clone https://github.com/duckdb/duckdb.git
+```
+
+#### 4. Install System Dependencies
+
+```bash
+# Update package lists
+apt-get update
+
+# Install build tools for DuckDB
+apt install -y cmake ccache
+
+# Install utilities for benchmark scripts
+apt install -y jq
+```
+
+#### 5. Python Environment
+
+We use `uv` for Python dependency management:
+
+```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Add uv to PATH
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+source ~/.bashrc
+
+# Navigate to benchmark directory
+cd ~/honours
+
+# Initialize Python 3.11 (required for aider-chat)
+uv python install 3.11
+uv python pin 3.11
+
+# Install dependencies (automatically reads pyproject.toml)
+uv sync
+```
+
+#### 6. Configure Aider
+
+Ignore this step if you are not using Aider.
+
+Create an `.aiderignore` file to exclude unnecessary directories
+
+```bash
+echo "extension/**" > scripts/aider_scripts/.aiderignore
+```
+
+#### 7. Environment Variables
+
+Create a `.env` file in the repository root with your API keys
+
+```bash
+OPENROUTER_API_KEY=your_key_here
+```
+
+#### 8. Configure ccache
+
+Set ccache to use more storage
+
+```bash
+ccache --max-size 20G
+```
+
+#### Make Scripts Executable
+
+```bash
+chmod +x scripts/*.sh
+chmod +x scripts/*.py
+```
+
+## Running the benchmark
+
+To start the benchmark, the following command-line arguments are required:
+
+- `--m`: the name of the model you want to test, e.g. `openai/gpt5`
+- `--k`: the number of generations you want each task to have
+- `--thinking-tokens`: optional, specifies a thinking token budget for models that support it
+- `--reasoning-effort`: optional, specifies a reasoning effort for models that support it
+
+Example command (using uv):
+
+```bash
+uv run scripts/benchmark/benchmark.py \
+--m openrouter/anthropic/claude-sonnet-4 \
+--thinking-tokens 24k \
+--k 5
+```
+
+## Analysis
+
+The `scripts/analysis/` directory contains scripts to compute standard metrics:
+
+- pass@k and patch success rate
+- build success / compile failure rate
+- difficulty correlations (lines changed, files changed, tests modified)
+
+
+There are R scripts and notebooks for plotting and thesis figures in `visualisations`
+
+
+## Contributing
+
+Contributions are welcome. Suggested contribution flow:
+
+1. Fork the repo and add new tasks under `datasets/`.
+2. Add generation/test scripts under `benchmarks/` if needed.
+3. Add analysis scripts under `analysis/` as needed.
+4. Submit a PR documenting your additions and referencing sample runs.
+
+Please include:
+- task metadata (commit, test names)
+- clear licensing for any added assets
+
+## Contact & Citation
+
+If you use DBCodeBench in research, please cite it and contact the maintainer:
+
+- Leon Lee — contact@leonlee.io
